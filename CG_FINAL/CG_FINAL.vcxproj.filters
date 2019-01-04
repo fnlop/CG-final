@@ -46,13 +46,34 @@
     <Filter Include="glm">
       <UniqueIdentifier>{97e77f03-ba2c-49c4-82ae-8502d505c09d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{ecace4b6-1870-487d-8295-372c66d1a6de}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\dissolving.frag" />
-    <None Include="shaders\dissolving.vert" />
-    <None Include="shaders\phong.frag" />
-    <None Include="shaders\phong.vert" />
-    <None Include="shaders\ramp.frag" />
-    <None Include="shaders\ramp.vert" />
+    <None Include="shaders\dissolving.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\dissolving.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\phong.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\phong.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\ramp.frag">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\ramp.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\explode.vert">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\explode.frag">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
