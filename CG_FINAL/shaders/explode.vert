@@ -12,6 +12,7 @@ uniform mat4 Nmatrix;
 uniform float expandValue;
 uniform float showPercent;
 uniform float meshEnlargeSize;
+uniform float seed;
 
 out vec2 texturetofrag;
 out vec3 L;
@@ -21,23 +22,30 @@ out vec3 toeye;
 out float dist;
 flat out vec3 center;
 
+#define PI (3.14159)
 const float expand = 2;
 
 float rand(vec2);
 float rand(vec3);
 float rand(vec3, float);
+vec3 randVec3(vec3);
+mat4 rotationMatrix(vec3, float);
 
 void main() {
-	center = tPosition;
-	vec3 expandPosition = tPosition * (1 + (expand - 1) * expandValue) + ((Position - tPosition) * meshEnlargeSize);
+	// random rotation
+	vec3 rotatePosition = vec3(rotationMatrix(randVec3(tPosition), rand(tPosition) * 2 * PI * expandValue) * vec4(Position - tPosition, 1.0)) + tPosition;
+	// push to outside and enlarge mesh with some random in scale
+	vec3 expandPosition = tPosition * (1 + (expand - 1) * expandValue) + (rotatePosition - tPosition) * meshEnlargeSize * (0.5 + rand(tPosition));
 	vec4 mdposition = modelview * vec4(expandPosition, 1.0);
 	gl_Position = proj * modelview * vec4(expandPosition, 1.0);
+
 	texturetofrag = Texture;
 	L = normalize(vec3(mdposition) -lightnow);			// vector of incoming light 
 	N = normalize(vec3(Nmatrix* vec4(Normal, 1.0)));
 	R = reflect(L,N);
 	dist = distance(vec3(mdposition),lightnow);
 	toeye = normalize(vec3(-mdposition));				// the vector from position to eye position
+	center = tPosition;
 }
 
 // magical random function
@@ -49,4 +57,19 @@ float rand(vec3 co){
 }
 float rand(vec3 co, float seed) {
 	return rand( vec2(rand(co), seed) );
+}
+vec3 randVec3(vec3 co) {
+	return vec3( rand(co.xyz), rand(co.zxy), rand(co.yzx) ) - 0.5;
+}
+// rotate by arbitrary axis
+mat4 rotationMatrix(vec3 axis, float angle) {
+    axis = normalize(axis);
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+    
+    return mat4(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,
+                oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,
+                oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,
+                0.0,                                0.0,                                0.0,                                1.0);
 }

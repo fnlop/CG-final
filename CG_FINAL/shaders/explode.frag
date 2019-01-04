@@ -6,6 +6,8 @@ uniform vec4 Ks;
 uniform float alpha;
 uniform sampler2D tex;
 uniform float showPercent;
+uniform float fadeValue;
+uniform float seed;
 
 in vec2 texturetofrag;
 in vec3 L;
@@ -17,15 +19,18 @@ flat in vec3 center;
 
 out vec4 outColor;
 
-const vec4 glowColor = vec4(120, 120, 255, 255) / 255.0;
+const vec4 glowColor = vec4(120, 120, 255, 125) / 255.0;
 
 float rand(vec2);
 float rand(vec3);
 float rand(vec3, float);
 
 void main() {
-	float v = rand(center);
+	float v = rand(center.zyx, seed);
 	if(v > showPercent){
+		discard;
+	}
+	if (fadeValue >= 1) {
 		discard;
 	}
 
@@ -38,6 +43,7 @@ void main() {
 	vec4 specular = Ks * Ls * pow(max(0,dot(toeye,R)), alpha) / sqrt(dist);
 	//outColor = ambient + diffuse + specular;
 	outColor = glowColor;
+	outColor.a *= 1 - fadeValue;
 }
 
 // magical random function

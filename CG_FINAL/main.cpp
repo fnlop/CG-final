@@ -6,6 +6,7 @@ CG Final - Death Effect
 #include <stddef.h> /*for function: offsetof */
 #include <math.h>
 #include <string.h>
+#include <random>
 #include "../GL/glew.h"
 #include "../GL/glut.h"
 #include "../shader_lib/shader.h"
@@ -123,6 +124,11 @@ float fadeValue = 0.0;
 float showPercent = 0.01;				// discard some traingles of OBJ with complicate mesh for better visual effect
 float meshEnlargeSize = 10;				// enlarge size of mesh after discarding
 
+// random for better visual effect
+std::default_random_engine gen = std::default_random_engine((std::random_device())());
+std::uniform_real_distribution<float> dis(0, 1);
+float randomSeed;
+
 void Tick(int id) {
 	double d = deltaTime / 1000.0;
 	if (mode == 1) {
@@ -137,10 +143,10 @@ void Tick(int id) {
 				fadeValue = std::fmin(fadeValue + d / fadeTime, 1);
 			}
 		}
-		printf("%.2f %.2f %.2f\n", showMeshValue, expandValue, fadeValue);
+		// printf("%.2f %.2f %.2f\n", showMeshValue, expandValue, fadeValue);
 	}
 	glutPostRedisplay();
-	glutTimerFunc(deltaTime, Tick, 0);				// 100ms for passTime step size
+	glutTimerFunc(deltaTime, Tick, 0);				
 }
 
 int main(int argc, char *argv[]) {
@@ -327,15 +333,20 @@ void display(void)
 			loc = glGetUniformLocation(program[mode], "alpha");
 			glUniform1f(loc, shine);
 			if (mode == 1) {					//explode effect
+				glDisable(GL_CULL_FACE);
 				loc = glGetUniformLocation(program[mode], "expandValue");
 				glUniform1f(loc, expandValue);
 				loc = glGetUniformLocation(program[mode], "showPercent");
 				glUniform1f(loc, showPercent);
 				loc = glGetUniformLocation(program[mode], "meshEnlargeSize");
 				glUniform1f(loc, meshEnlargeSize);
+				loc = glGetUniformLocation(program[mode], "fadeValue");
+				glUniform1f(loc, fadeValue);
+				loc = glGetUniformLocation(program[mode], "seed");
+				glUniform1f(loc, randomSeed);
 			}
 			glDrawArrays(GL_TRIANGLES, 0, 3 * model->numtriangles);
-
+			glEnable(GL_CULL_FACE);
 			glBindTexture(GL_TEXTURE_2D, NULL);
 
 		glUseProgram(0);
@@ -358,6 +369,7 @@ void keyboard(unsigned char key, int x, int y) {
 		mode = (mode + 1) % PROGRAM_NUM;
 		if (mode == 1) {				// start explode
 			showMeshValue = expandValue = fadeValue = 0;
+			randomSeed = dis(gen);
 		}
 		break;
 	}
