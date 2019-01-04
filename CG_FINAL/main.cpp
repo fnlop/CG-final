@@ -30,6 +30,12 @@ struct Vertex
 };
 typedef struct Vertex Vertex;
 
+struct Point
+{
+	GLfloat position[3];
+};
+typedef struct Point Point;
+
 //no need to modify the following function declarations and gloabal variables
 void init(void);
 void display(void);
@@ -96,11 +102,13 @@ GLuint mainTextureID; // TA has already loaded this texture for you
 GLuint noiseTextureID; // TA has already loaded this texture for you
 GLuint rampTextureID; // TA has already loaded this texture for you
 GLuint vbo_id;
+GLuint vbo_line_id;
+GLuint vaoHandle_line;
 GLuint vaoHandle;
-GLuint program[3];
+GLuint program[4];
 int mode = 0;
-char *vertfile[3] = {"shaders/phong.vert", "shaders/dissolving.vert" , "shaders/ramp.vert" };
-char *fragfile[3] = {"shaders/phong.frag", "shaders/dissolving.frag" , "shaders/ramp.frag" };
+char *vertfile[4] = {"shaders/phong.vert", "shaders/dissolving.vert" , "shaders/ramp.vert" , "shaders/mesh.vert" };
+char *fragfile[4] = {"shaders/phong.frag", "shaders/dissolving.frag" , "shaders/ramp.frag" , "shaders/mesh.frag" };
 GLfloat Ka[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat Kd[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat Ks[4] = { 1.0, 1.0, 1.0, 1.0 };
@@ -171,6 +179,7 @@ void init(void)
 	glGenBuffers(1, &vbo_id); //generate a vbo buffer and assign its pointer to vboid
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_id); //bind with the buffer , GL_ARRAY_BUFFER is for vertex type
 
+
 //GLMtriangle: Structure that defines a triangle in a model.
 //	/	typedef struct _GLMtriangle {
 //		GLuint vindices[3];           /* array of triangle vertex indices */
@@ -202,7 +211,6 @@ void init(void)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * 3 * model->numtriangles, vertices, GL_STATIC_DRAW);  //try Dynamic?
 	glGenVertexArrays(1, &vaoHandle);
 	glBindVertexArray(vaoHandle);
-
 	glEnableVertexAttribArray(0); //VAO[0] for position
 	glEnableVertexAttribArray(1); //VAO[1] for normal
 	glEnableVertexAttribArray(2); //VAO[2] for textures
@@ -212,19 +220,57 @@ void init(void)
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, normal)));
 	//texture
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, texcoord)));
-
- 
-
+	
+	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	  
+	
+	//line vbo
+	//create vbo , need vertex information
+	glGenBuffers(1, &vbo_line_id); //generate a vbo buffer and assign its pointer to vboid
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_line_id); //bind with the buffer , GL_ARRAY_BUFFER is for vertex type
+	Point *mesh = new Point[6 * model->numtriangles];
+	for (unsigned int i = 0; i < model->numtriangles; i++) {
+		index = model->triangles[i].vindices[0];		
+		int j;
+		for (j = 0; j < 3; j++) {
+			mesh[6 * i + 0].position[j] = model->vertices[3 * index + j];
+		}
 
+		index = model->triangles[i].vindices[1];	
+		for (j = 0; j < 3; j++) {
+			mesh[6 * i + 1].position[j] = model->vertices[3 * index + j];
+		}
 
-	// APIs for creating shaders and creating shader programs have been done by TAs
-	// following is an example for creating a shader program using given vertex shader and fragment shader
-	/*
-	GLuint vert = createShader("Shaders/bump.vert", "vertex");
-	GLuint frag = createShader("Shaders/bump.frag", "fragment");
-	GLuint program = createProgram(vert, frag);
-	*/
+		index = model->triangles[i].vindices[1];
+		for (j = 0; j < 3; j++) {
+			mesh[6 * i + 2].position[j] = model->vertices[3 * index + j];
+		}
+
+		index = model->triangles[i].vindices[2];
+		for (j = 0; j < 3; j++) {
+			mesh[6 * i + 3].position[j] = model->vertices[3 * index + j];
+		}
+
+		index = model->triangles[i].vindices[2];
+		for (j = 0; j < 3; j++) {
+			mesh[6 * i + 4].position[j] = model->vertices[3 * index + j];
+		}
+		 
+		index = model->triangles[i].vindices[0];
+		for (j = 0; j < 3; j++) {
+			mesh[6 * i + 5].position[j] = model->vertices[3 * index + j];
+		}
+	}
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * 6 * model->numtriangles, mesh, GL_STATIC_DRAW); 
+	glGenVertexArrays(1, &vaoHandle_line); 
+	glBindVertexArray(vaoHandle_line);
+	glEnableVertexAttribArray(0); 
+	//position
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point),(void*) 0);
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	
 }
 
 void display(void)
@@ -257,12 +303,13 @@ void display(void)
 	glm::vec3 lightnow = glm::make_mat4(tmpmodelview) * glm::vec4(glm::make_vec3(light_pos),  1.0);
 
 	glPushMatrix();
+		glBindVertexArray(vaoHandle);
 		glTranslatef(ball_pos[0], ball_pos[1], ball_pos[2]);
 		glRotatef(ball_rot[0], 1, 0, 0);
 		glRotatef(ball_rot[1], 0, 1, 0);
 		glRotatef(ball_rot[2], 0, 0, 1);
 	// please try not to modify the previous block of code
-
+		
 	// you may need to do something here(pass uniform variable(s) to shader and render the model)
 		glUseProgram(program[mode]);
 			float modelview[16];
@@ -344,11 +391,36 @@ void display(void)
 
 
 			}
+
 			glDrawArrays(GL_TRIANGLES, 0, 3 * model->numtriangles);
-
-			glBindTexture(GL_TEXTURE_2D, NULL);
-
+	
 		glUseProgram(0);
+		//glDrawElements(GL_TRIANGLES, 3 * model->numtriangles, GL_UNSIGNED_INT, 0);GL_TRIANGLES GL_LINE_STRIP_ADJACENCY
+		glBindTexture(GL_TEXTURE_2D, NULL);
+		glBindVertexArray(0);
+
+
+
+		//glDisable(GL_LIGHTING);
+		glColor4f(0.f, 0.f, 0.f, 1.0f);
+		glBindVertexArray(vaoHandle_line);
+		glUseProgram(program[3]);				
+
+			//float modelview[16];
+			//float proj[16];
+			//GLint loc;
+			glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
+			glGetFloatv(GL_PROJECTION_MATRIX, proj);
+			loc = glGetUniformLocation(program[3], "modelview"); //get the location of uniform variable in shader
+			glUniformMatrix4fv(loc, 1, GL_FALSE, modelview); //assign value to it 
+			loc = glGetUniformLocation(program[3], "proj");
+			glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
+
+			glLineWidth(2.f); 
+			glDrawArrays(GL_LINES, 0, 6 * model->numtriangles);
+		glUseProgram(0);
+		glBindVertexArray(0);
+		//glEnable(GL_LIGHTING);
 
 	glPopMatrix();
 

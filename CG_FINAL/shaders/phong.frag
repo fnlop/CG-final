@@ -25,5 +25,5 @@ void main() {
 	vec4 ambient = Ka*La * texture2D(tex,texturetofrag);
 	vec4 diffuse=texture2D(tex,texturetofrag)* Kd*Ld * max(0,dot(-L,N))/sqrt(dist);
 	vec4 specular = Ks * Ls * pow(max(0,dot(toeye,R)),alpha)/sqrt(dist);
-	outColor = ambient+diffuse+specular;
+	outColor = 3*ambient+diffuse+specular;
 	}

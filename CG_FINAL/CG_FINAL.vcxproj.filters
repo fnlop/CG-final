@@ -54,5 +54,7 @@
     <None Include="shaders\phong.vert" />
     <None Include="shaders\ramp.frag" />
     <None Include="shaders\ramp.vert" />
+    <None Include="shaders\mesh.frag" />
+    <None Include="shaders\mesh.vert" />
   </ItemGroup>
 </Project>
