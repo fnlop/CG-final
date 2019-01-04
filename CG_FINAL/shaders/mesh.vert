@@ -1,9 +1,10 @@
 #version 400
 
-layout(location = 3) in vec3 Position;
+layout(location = 0) in vec3 Position;
 
 uniform mat4 modelview;
 uniform mat4 proj;
+
 
 void main() {
 	vec4 mdposition = modelview*vec4(Position,1.0);

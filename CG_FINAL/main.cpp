@@ -170,7 +170,7 @@ void init(void)
 	print_model_info(model);
 
 	//you may need to do something here(create shaders/program(s) and create vbo(s)/vao from GLMmodel model)
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < 4; i++) {
 		GLuint vert = createShader(vertfile[i], "vertex");
 		GLuint frag = createShader(fragfile[i], "fragment");
 		program[i] = createProgram(vert, frag);
@@ -262,7 +262,7 @@ void init(void)
 			mesh[6 * i + 5].position[j] = model->vertices[3 * index + j];
 		}
 	}
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * 6 * model->numtriangles, mesh, GL_STATIC_DRAW); 
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * 6 * model->numtriangles, mesh, GL_DYNAMIC_DRAW); 
 	glGenVertexArrays(1, &vaoHandle_line); 
 	glBindVertexArray(vaoHandle_line);
 	glEnableVertexAttribArray(0); 
@@ -395,18 +395,16 @@ void display(void)
 			glDrawArrays(GL_TRIANGLES, 0, 3 * model->numtriangles);
 	
 		glUseProgram(0);
-		//glDrawElements(GL_TRIANGLES, 3 * model->numtriangles, GL_UNSIGNED_INT, 0);GL_TRIANGLES GL_LINE_STRIP_ADJACENCY
+
 		glBindTexture(GL_TEXTURE_2D, NULL);
 		glBindVertexArray(0);
 
 
 
 		//glDisable(GL_LIGHTING);
-		glColor4f(0.f, 0.f, 0.f, 1.0f);
 		glBindVertexArray(vaoHandle_line);
 		glUseProgram(program[3]);				
-
-			//float modelview[16];
+			//float modelview[16];i
 			//float proj[16];
 			//GLint loc;
 			glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
@@ -416,6 +414,7 @@ void display(void)
 			loc = glGetUniformLocation(program[3], "proj");
 			glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
 
+			glColor4f(0.f, 0.f, 0.f, 1.0f);
 			glLineWidth(2.f); 
 			glDrawArrays(GL_LINES, 0, 6 * model->numtriangles);
 		glUseProgram(0);
