@@ -141,6 +141,8 @@
   <ItemGroup>
     <None Include="shaders\dissolving.frag" />
     <None Include="shaders\dissolving.vert" />
+    <None Include="shaders\explode.frag" />
+    <None Include="shaders\explode.vert" />
     <None Include="shaders\mesh.frag" />
     <None Include="shaders\mesh.vert" />
     <None Include="shaders\phong.frag" />

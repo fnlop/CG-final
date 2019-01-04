@@ -6,6 +6,7 @@ CG Final - Death Effect
 #include <stddef.h> /*for function: offsetof */
 #include <math.h>
 #include <string.h>
+#include <random>
 #include "../GL/glew.h"
 #include "../GL/glut.h"
 #include "../shader_lib/shader.h"
@@ -18,15 +19,15 @@ extern "C"
 	#include "glm_helper.h"
 }
 
-/*you may need to do something here
-you may use the following struct type to perform your single VBO method,
-or you can define/declare multiple VBOs for VAO method.
-Please feel free to modify it*/
+#define PROGRAM_NUM (2)
+#define deltaTime (10)		// in ms (1e-3 second)
+
 struct Vertex
 {
 	GLfloat position[3];
 	GLfloat normal[3];
 	GLfloat texcoord[2];
+	GLfloat trianglePosition[3];
 };
 typedef struct Vertex Vertex;
 
@@ -90,11 +91,8 @@ namespace
 	int mousey = 0;
 }
 
-// You can modify the moving/rotating speed if it's too fast/slow for you
 const float speed = 0.03; // camera / light / ball moving speed
 const float rotation_speed = 0.05; // ball rotating speed
-
-//you may need to use some of the following variables in your program 
 
 // No need for model texture, 'cause glmModel() has already loaded it for you.
 // To use the texture, check glmModel documentation.
@@ -105,16 +103,14 @@ GLuint vbo_id;
 GLuint vbo_line_id;
 GLuint vaoHandle_line;
 GLuint vaoHandle;
-GLuint program[4];
+GLuint program[PROGRAM_NUM + 1];
 int mode = 0;
-char *vertfile[4] = {"shaders/phong.vert", "shaders/dissolving.vert" , "shaders/ramp.vert" , "shaders/mesh.vert" };
-char *fragfile[4] = {"shaders/phong.frag", "shaders/dissolving.frag" , "shaders/ramp.frag" , "shaders/mesh.frag" };
+char *vertfile[PROGRAM_NUM + 1] = {"shaders/phong.vert", "shaders/explode.vert", "shaders/mesh.vert"};
+char *fragfile[PROGRAM_NUM + 1] = {"shaders/phong.frag", "shaders/explode.frag", "shaders/mesh.frag"};
 GLfloat Ka[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat Kd[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat Ks[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat shine = 100;
-float step = 0.01; //for dissolving
-float threshold = 0;
 
 GLMmodel *model; //TA has already loaded the model for you(!but you still need to convert it to VBO(s)!)
 
@@ -126,11 +122,45 @@ GLfloat light_pos[] = { 1.1, 1.0, 1.3 }; //light positions
 GLfloat ball_pos[] = { 0.0, 0.0, 0.0 };
 GLfloat ball_rot[] = { 0.0, 0.0, 0.0 };
 
-int main(int argc, char *argv[]){
+const float showMeshTime = 0.01;
+const float expandTime = 2.0;
+const float startFadePercent = 0.5;
+const float fadeTime = 2.0;
+float showMeshValue = 0.0;
+float expandValue = 0.0;
+float fadeValue = 0.0;
+float showPercent = 0.01;				// discard some traingles of OBJ with complicate mesh for better visual effect
+float meshEnlargeSize = 10;				// enlarge size of mesh after discarding
+
+// random for better visual effect
+std::default_random_engine gen = std::default_random_engine((std::random_device())());
+std::uniform_real_distribution<float> dis(0, 1);
+float randomSeed;
+
+void Tick(int id) {
+	double d = deltaTime / 1000.0;
+	if (mode == 1) {
+		if (showMeshValue < 1) {
+			showMeshValue = std::fmin(showMeshValue + d / showMeshTime, 1);
+		}
+		else {
+			if (expandValue < 1) {
+				expandValue = std::fmin(expandValue + d / expandTime, 1);
+			}
+			if (expandValue >= startFadePercent && fadeValue < 1) {
+				fadeValue = std::fmin(fadeValue + d / fadeTime, 1);
+			}
+		}
+		// printf("%.2f %.2f %.2f\n", showMeshValue, expandValue, fadeValue);
+	}
+	glutPostRedisplay();
+	glutTimerFunc(deltaTime, Tick, 0);				
+}
+
+int main(int argc, char *argv[]) {
 	glutInit(&argc, argv);
 
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
-	// remember to replace "YourStudentID" with your own student ID
 	glutCreateWindow("CG_FINAL_Team4");
 	glutReshapeWindow(512, 512);
 
@@ -145,6 +175,8 @@ int main(int argc, char *argv[]){
 	glutKeyboardUpFunc(keyboardup);
 	glutMouseFunc(mouse);
 	glutMotionFunc(motion);
+
+	glutTimerFunc(deltaTime, Tick, 0);			//pass Timer function
 
 	glutMainLoop();
 
@@ -170,7 +202,7 @@ void init(void)
 	print_model_info(model);
 
 	//you may need to do something here(create shaders/program(s) and create vbo(s)/vao from GLMmodel model)
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < PROGRAM_NUM; i++) {
 		GLuint vert = createShader(vertfile[i], "vertex");
 		GLuint frag = createShader(fragfile[i], "fragment");
 		program[i] = createProgram(vert, frag);
@@ -187,43 +219,54 @@ void init(void)
 //		GLuint tindices[3];           /* array of triangle texcoord indices*/
 //		GLuint findex;                /* index of triangle facet normal */
 	int index;
-	Vertex *vertices = new Vertex[3 * model->numtriangles]; //total vertices
-	for (unsigned int i = 0; i < model->numtriangles; i++) { //all triangles
-		for (int j = 0; j < 3; j++) {  //vertices in a triangle
-			index = model->triangles[i].vindices[j]; //specific vertex
+	Vertex *vertices = new Vertex[3 * model->numtriangles];			//total vertices
+	for (unsigned int i = 0; i < model->numtriangles; i++) {		//all triangles
+		GLfloat tpos[3] = {0, 0, 0};
+		for (int j = 0; j < 3; j++) {						//vertices in a triangle
 			//position
+			index = model->triangles[i].vindices[j];		//specific vertex
 			int k;
 			for (k = 0; k < 3; k++) {
 				vertices[3 * i + j].position[k] = model->vertices[3 * index + k];
+				tpos[k] += model->vertices[3 * index + k];
 			}
-			index = model->triangles[i].nindices[j];
 			//normal
+			index = model->triangles[i].nindices[j];
 			for (k = 0; k < 3; k++) {
 				vertices[3 * i + j].normal[k] = model->normals[3 * index + k];
 			}
 			//texture
-			index = model->triangles[i].tindices[j]; //
+			index = model->triangles[i].tindices[j]; 
 			for (k = 0; k < 2; k++) {
 				vertices[3 * i + j].texcoord[k] = model->texcoords[2 * index + k];
 			}
 		}
-	} //get all vertex info we want, give it to openGL
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * 3 * model->numtriangles, vertices, GL_STATIC_DRAW);  //try Dynamic?
+		// set triangle position to all the 3 vertices
+		for (int j = 0; j < 3; j++) {
+			for (int k = 0; k < 3; k++) {
+				vertices[3 * i + j].trianglePosition[k] = tpos[k] / 3;
+			}
+		}
+	} 
+	// use vertices to construct VBO
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * 3 * model->numtriangles, vertices, GL_STATIC_DRAW);
 	glGenVertexArrays(1, &vaoHandle);
 	glBindVertexArray(vaoHandle);
-	glEnableVertexAttribArray(0); //VAO[0] for position
-	glEnableVertexAttribArray(1); //VAO[1] for normal
-	glEnableVertexAttribArray(2); //VAO[2] for textures
+	glEnableVertexAttribArray(0);	//VAO[0] for position
+	glEnableVertexAttribArray(1);	//VAO[1] for normal
+	glEnableVertexAttribArray(2);	//VAO[2] for textures
+	glEnableVertexAttribArray(3);	//VAO[3] for traingle position
 	//position
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, position)));
 	//normal
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, normal)));
 	//texture
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, texcoord)));
+	// triangle position
+	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, trianglePosition)));
 	
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	  
 	
 	//line vbo
 	//create vbo , need vertex information
@@ -271,19 +314,17 @@ void init(void)
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void display(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	//you may need to do something here(declare some local variables you need and maybe load Model matrix here...)
-
-
-
 	//please try not to modify the following block of code(you can but you are not supposed to)
-	glMatrixMode(GL_MODELVIEW); //glMatrixMode()函数的参数，这个函数其实就是对接下来要做什么进行一下声明，也就是在要做下一步之前告诉计算机我要对“什么”进行操作了
-	glLoadIdentity(); //initialization to I
+	glMatrixMode(GL_MODELVIEW); 
+	glLoadIdentity();				//initialization to Identity matrix
 	gluLookAt(
 		eyex,  //our head
 		eyey, 
@@ -315,105 +356,71 @@ void display(void)
 			float modelview[16];
 			float proj[16];
 			GLint loc;
+
+			// main texture
 			loc = glGetUniformLocation(program[mode], "tex");
 			glActiveTexture(GL_TEXTURE0 + 0); //GL_TEXTUREi = GL_TEXTURE0 + i
 			glBindTexture(GL_TEXTURE_2D, mainTextureID);
 			glUniform1i(loc, 0);
 
-			if (mode == 0) { //phong shading
+			// model view matrix
+			glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
+			loc = glGetUniformLocation(program[mode], "modelview");	//get the location of uniform variable in shader
+			glUniformMatrix4fv(loc, 1, GL_FALSE, modelview);		//assign value to it 
+			// projection matrix
+			glGetFloatv(GL_PROJECTION_MATRIX, proj);
+			loc = glGetUniformLocation(program[mode], "proj");
+			glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
+			// all modes have basic phong shading
 			//phong shading needs position in local space
-				glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
-				glGetFloatv(GL_PROJECTION_MATRIX, proj);
+			// normal matrix
+			glm::mat4 Nmatrix = glm::transpose(glm::inverse(glm::make_mat4(modelview)));
+			loc = glGetUniformLocation(program[mode], "Nmatrix");
+			glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(Nmatrix));
 
-				loc = glGetUniformLocation(program[0], "modelview"); //get the location of uniform variable in shader
-				glUniformMatrix4fv(loc, 1, GL_FALSE, modelview); //assign value to it 
-				loc = glGetUniformLocation(program[0], "proj");
-				glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
-				glm::mat4 Nmatrix = glm::transpose(glm::inverse(glm::make_mat4(modelview)));
-				loc = glGetUniformLocation(program[0], "Nmatrix");
-				glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(Nmatrix));
-				loc = glGetUniformLocation(program[0], "Ka");
-				glUniform4fv(loc, 1, Ka);
-				loc = glGetUniformLocation(program[0], "Kd");
-				glUniform4fv(loc, 1, Kd);
-				loc = glGetUniformLocation(program[0], "lightnow");
-				glUniform3fv(loc, 1, glm::value_ptr(lightnow));
-				loc = glGetUniformLocation(program[0], "Ks");
-				glUniform4fv(loc, 1, Ks);
-				loc = glGetUniformLocation(program[0], "alpha");
-				glUniform1f(loc, shine);
-			}
-			if (mode == 1) { //dissolving effect
-				threshold += step;
-				if (threshold > 1) {
-					threshold = 0;
-				}
-				//printf("%f\n", threshold);
-				glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
-				glGetFloatv(GL_PROJECTION_MATRIX, proj);
-				loc = glGetUniformLocation(program[1], "modelview"); //get the location of uniform variable in shader
-				glUniformMatrix4fv(loc, 1, GL_FALSE, modelview); //assign value to it 
-				loc = glGetUniformLocation(program[1], "proj");
-				glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
-				loc = glGetUniformLocation(program[1], "threshold");
-				glUniform1f(loc, threshold);			
-				loc = glGetUniformLocation(program[1], "noise");
-				glActiveTexture(GL_TEXTURE1); //GL_TEXTUREi = GL_TEXTURE0 + i
-				glBindTexture(GL_TEXTURE_2D, noiseTextureID);
-				glUniform1i(loc, 1);
-			}
-			if (mode == 2) { //ramp
-				//need diffuse
-				glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
-				glGetFloatv(GL_PROJECTION_MATRIX, proj);
-
-				loc = glGetUniformLocation(program[2], "modelview"); //get the location of uniform variable in shader
-				glUniformMatrix4fv(loc, 1, GL_FALSE, modelview); //assign value to it 
-				loc = glGetUniformLocation(program[2], "proj");
-				glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
-				glm::mat4 Nmatrix = glm::transpose(glm::inverse(glm::make_mat4(modelview)));
-				loc = glGetUniformLocation(program[2], "Nmatrix");
-				glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(Nmatrix));
-				loc = glGetUniformLocation(program[2], "Ka");
-				glUniform4fv(loc, 1, Ka);
-				loc = glGetUniformLocation(program[2], "Kd");
-				glUniform4fv(loc, 1, Kd);
-				loc = glGetUniformLocation(program[2], "lightnow");
-				glUniform3fv(loc, 1, glm::value_ptr(lightnow));
-				loc = glGetUniformLocation(program[2], "Ks");
-				glUniform4fv(loc, 1, Ks);
-				loc = glGetUniformLocation(program[2], "alpha");
-				glUniform1f(loc, shine);				
-				loc = glGetUniformLocation(program[2], "ramp");
-				glActiveTexture(GL_TEXTURE1); //GL_TEXTUREi = GL_TEXTURE0 + i
-				glBindTexture(GL_TEXTURE_2D, rampTextureID);
-				glUniform1i(loc, 1);
-
-
+			loc = glGetUniformLocation(program[mode], "Ka");
+			glUniform4fv(loc, 1, Ka);
+			loc = glGetUniformLocation(program[mode], "Kd");
+			glUniform4fv(loc, 1, Kd);
+			loc = glGetUniformLocation(program[mode], "lightnow");
+			glUniform3fv(loc, 1, glm::value_ptr(lightnow));
+			loc = glGetUniformLocation(program[mode], "Ks");
+			glUniform4fv(loc, 1, Ks);
+			loc = glGetUniformLocation(program[mode], "alpha");
+			glUniform1f(loc, shine);
+			if (mode == 1) {					//explode effect
+				glDisable(GL_CULL_FACE);
+				loc = glGetUniformLocation(program[mode], "expandValue");
+				glUniform1f(loc, expandValue);
+				loc = glGetUniformLocation(program[mode], "showPercent");
+				glUniform1f(loc, showPercent);
+				loc = glGetUniformLocation(program[mode], "meshEnlargeSize");
+				glUniform1f(loc, meshEnlargeSize);
+				loc = glGetUniformLocation(program[mode], "fadeValue");
+				glUniform1f(loc, fadeValue);
+				loc = glGetUniformLocation(program[mode], "seed");
+				glUniform1f(loc, randomSeed);
 			}
 
 			glDrawArrays(GL_TRIANGLES, 0, 3 * model->numtriangles);
-	
 		glUseProgram(0);
-
+		
+		glEnable(GL_CULL_FACE);	
 		glBindTexture(GL_TEXTURE_2D, NULL);
 		glBindVertexArray(0);
 
-
-
 		//glDisable(GL_LIGHTING);
 		glBindVertexArray(vaoHandle_line);
-		glUseProgram(program[3]);				
+		glUseProgram(program[PROGRAM_NUM]);				
 			//float modelview[16];i
 			//float proj[16];
 			//GLint loc;
 			glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
 			glGetFloatv(GL_PROJECTION_MATRIX, proj);
-			loc = glGetUniformLocation(program[3], "modelview"); //get the location of uniform variable in shader
+			loc = glGetUniformLocation(program[PROGRAM_NUM], "modelview"); //get the location of uniform variable in shader
 			glUniformMatrix4fv(loc, 1, GL_FALSE, modelview); //assign value to it 
-			loc = glGetUniformLocation(program[3], "proj");
+			loc = glGetUniformLocation(program[PROGRAM_NUM], "proj");
 			glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
-
 			glColor4f(0.f, 0.f, 0.f, 1.0f);
 			glLineWidth(2.f); 
 			glDrawArrays(GL_LINES, 0, 6 * model->numtriangles);
@@ -436,8 +443,11 @@ void keyboard(unsigned char key, int x, int y) {
 	}
 	case 'b'://toggle mode
 	{	
-		mode = (mode + 1) % 3;
-		//you may need to do somting here
+		mode = (mode + 1) % PROGRAM_NUM;
+		if (mode == 1) {				// start explode
+			showMeshValue = expandValue = fadeValue = 0;
+			randomSeed = dis(gen);
+		}
 		break;
 	}
 	case 'd':
