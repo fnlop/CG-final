@@ -19,7 +19,8 @@ extern "C"
 	#include "glm_helper.h"
 }
 
-#define PROGRAM_NUM (2)
+#define PROGRAM_NUM (1)
+#define OBJ_NUM (3)
 #define deltaTime (10)		// in ms (1e-3 second)
 
 struct Vertex
@@ -52,7 +53,7 @@ GLuint loadTexture(char* name, GLfloat width, GLfloat height);
 
 namespace
 {
-	char *obj_file_dir = "../Resources/bunny.obj";
+	char *obj_file_dir[OBJ_NUM] = { "../Resources/bunny.obj",  "../Resources/Ball.obj" , "../Resources/teapot.obj" };
 	char *main_tex_dir = "../Resources/Stone.ppm";
 	char *noise_tex_dir = "../Resources/Noise.ppm";
 	char *ramp_tex_dir = "../Resources/Ramp.ppm";
@@ -97,22 +98,21 @@ const float rotation_speed = 0.05; // ball rotating speed
 // No need for model texture, 'cause glmModel() has already loaded it for you.
 // To use the texture, check glmModel documentation.
 GLuint mainTextureID; // TA has already loaded this texture for you
-GLuint noiseTextureID; // TA has already loaded this texture for you
-GLuint rampTextureID; // TA has already loaded this texture for you
-GLuint vbo_id;
-GLuint vbo_line_id;
-GLuint vaoHandle_line;
-GLuint vaoHandle;
+GLuint vbo_id[OBJ_NUM];
+GLuint vbo_line_id[OBJ_NUM];
+GLuint vaoHandle[OBJ_NUM];
+GLuint vaoHandle_line[OBJ_NUM];
+int modelIdx = 0;
 GLuint program[PROGRAM_NUM + 1];
 int mode = 0;
-char *vertfile[PROGRAM_NUM + 1] = {"shaders/phong.vert", "shaders/explode.vert", "shaders/mesh.vert"};
-char *fragfile[PROGRAM_NUM + 1] = {"shaders/phong.frag", "shaders/explode.frag", "shaders/mesh.frag"};
+char *vertfile[PROGRAM_NUM + 1] = {"shaders/explode.vert", "shaders/mesh.vert"};
+char *fragfile[PROGRAM_NUM + 1] = {"shaders/explode.frag", "shaders/mesh.frag"};
 GLfloat Ka[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat Kd[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat Ks[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat shine = 100;
 
-GLMmodel *model; //TA has already loaded the model for you(!but you still need to convert it to VBO(s)!)
+GLMmodel *models[OBJ_NUM]; //TA has already loaded the model for you(!but you still need to convert it to VBO(s)!)
 
 float eyex = 0.0;
 float eyey = 0.0;
@@ -126,11 +126,14 @@ const float showMeshTime = 0.01;
 const float expandTime = 2.0;
 const float startFadePercent = 0.5;
 const float fadeTime = 2.0;
+bool pause = true;
 float showMeshValue = 0.0;
 float expandValue = 0.0;
 float fadeValue = 0.0;
-float showPercent = 0.01;				// discard some traingles of OBJ with complicate mesh for better visual effect
-float meshEnlargeSize = 10;				// enlarge size of mesh after discarding
+// discard some traingles of OBJ with complicate mesh for better visual effect, differ with different models
+float showPercent[OBJ_NUM] = { 0.01, 0.5, 0.1 };
+// enlarge size of mesh after discarding, differ with different models and showPercent
+float meshEnlargeSize[OBJ_NUM] = { 10, 1, 3 };
 
 // random for better visual effect
 std::default_random_engine gen = std::default_random_engine((std::random_device())());
@@ -139,7 +142,7 @@ float randomSeed;
 
 void Tick(int id) {
 	double d = deltaTime / 1000.0;
-	if (mode == 1) {
+	if (!pause) {
 		if (showMeshValue < 1) {
 			showMeshValue = std::fmin(showMeshValue + d / showMeshTime, 1);
 		}
@@ -180,48 +183,35 @@ int main(int argc, char *argv[]) {
 
 	glutMainLoop();
 
-	glmDelete(model);
+	for (GLMmodel *m : models) {
+		glmDelete(m);
+	}
+
 	return 0;
 }
 
-void init(void)
-{
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glEnable(GL_CULL_FACE);
-	model = glmReadOBJ(obj_file_dir); //object file
-
-	mainTextureID = loadTexture(main_tex_dir, 512, 256);
-	noiseTextureID = loadTexture(noise_tex_dir, 360, 360);
-	rampTextureID = loadTexture(ramp_tex_dir, 256, 256);
-	
+void loadModel(char *path, int idx) {
+	// load model obj file
+	GLMmodel *model = glmReadOBJ(path);			//object file
 	glmUnitize(model);
 	glmFacetNormals(model);
 	glmVertexNormals(model, 90.0, GL_FALSE);
-	glEnable(GL_DEPTH_TEST);
-	print_model_info(model);
+	models[idx] = model;
+	//print_model_info(model);
 
-	//you may need to do something here(create shaders/program(s) and create vbo(s)/vao from GLMmodel model)
-	for (int i = 0; i < PROGRAM_NUM; i++) {
-		GLuint vert = createShader(vertfile[i], "vertex");
-		GLuint frag = createShader(fragfile[i], "fragment");
-		program[i] = createProgram(vert, frag);
-	}
-	//create vbo , need vertex information
-	glGenBuffers(1, &vbo_id); //generate a vbo buffer and assign its pointer to vboid
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_id); //bind with the buffer , GL_ARRAY_BUFFER is for vertex type
-
-
-//GLMtriangle: Structure that defines a triangle in a model.
+	//GLMtriangle: Structure that defines a triangle in a model.
 //	/	typedef struct _GLMtriangle {
 //		GLuint vindices[3];           /* array of triangle vertex indices */
 //		GLuint nindices[3];           /* array of triangle normal indices */
 //		GLuint tindices[3];           /* array of triangle texcoord indices*/
 //		GLuint findex;                /* index of triangle facet normal */
+
+	// ---- generate VBO ----
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_id[idx]); //bind with the buffer , GL_ARRAY_BUFFER is for vertex type
 	int index;
 	Vertex *vertices = new Vertex[3 * model->numtriangles];			//total vertices
 	for (unsigned int i = 0; i < model->numtriangles; i++) {		//all triangles
-		GLfloat tpos[3] = {0, 0, 0};
+		GLfloat tpos[3] = { 0, 0, 0 };
 		for (int j = 0; j < 3; j++) {						//vertices in a triangle
 			//position
 			index = model->triangles[i].vindices[j];		//specific vertex
@@ -236,7 +226,7 @@ void init(void)
 				vertices[3 * i + j].normal[k] = model->normals[3 * index + k];
 			}
 			//texture
-			index = model->triangles[i].tindices[j]; 
+			index = model->triangles[i].tindices[j];
 			for (k = 0; k < 2; k++) {
 				vertices[3 * i + j].texcoord[k] = model->texcoords[2 * index + k];
 			}
@@ -247,15 +237,16 @@ void init(void)
 				vertices[3 * i + j].trianglePosition[k] = tpos[k] / 3;
 			}
 		}
-	} 
+	}
 	// use vertices to construct VBO
 	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * 3 * model->numtriangles, vertices, GL_STATIC_DRAW);
-	glGenVertexArrays(1, &vaoHandle);
-	glBindVertexArray(vaoHandle);
-	glEnableVertexAttribArray(0);	//VAO[0] for position
-	glEnableVertexAttribArray(1);	//VAO[1] for normal
-	glEnableVertexAttribArray(2);	//VAO[2] for textures
-	glEnableVertexAttribArray(3);	//VAO[3] for traingle position
+	
+	// ---- generate VAO ----
+	glBindVertexArray(vaoHandle[idx]);
+	glEnableVertexAttribArray(0);	// VAO[0] for position
+	glEnableVertexAttribArray(1);	// VAO[1] for normal
+	glEnableVertexAttribArray(2);	// VAO[2] for textures
+	glEnableVertexAttribArray(3);	// VAO[3] for traingle position
 	//position
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, position)));
 	//normal
@@ -264,23 +255,20 @@ void init(void)
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, texcoord)));
 	// triangle position
 	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(offsetof(Vertex, trianglePosition)));
-	
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	
+
 	//line vbo
 	//create vbo , need vertex information
-	glGenBuffers(1, &vbo_line_id); //generate a vbo buffer and assign its pointer to vboid
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_line_id); //bind with the buffer , GL_ARRAY_BUFFER is for vertex type
+	
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_line_id[idx]); //bind with the buffer , GL_ARRAY_BUFFER is for vertex type
 	Point *mesh = new Point[6 * model->numtriangles];
 	for (unsigned int i = 0; i < model->numtriangles; i++) {
-		index = model->triangles[i].vindices[0];		
+		index = model->triangles[i].vindices[0];
 		int j;
 		for (j = 0; j < 3; j++) {
 			mesh[6 * i + 0].position[j] = model->vertices[3 * index + j];
 		}
 
-		index = model->triangles[i].vindices[1];	
+		index = model->triangles[i].vindices[1];
 		for (j = 0; j < 3; j++) {
 			mesh[6 * i + 1].position[j] = model->vertices[3 * index + j];
 		}
@@ -299,20 +287,55 @@ void init(void)
 		for (j = 0; j < 3; j++) {
 			mesh[6 * i + 4].position[j] = model->vertices[3 * index + j];
 		}
-		 
+
 		index = model->triangles[i].vindices[0];
 		for (j = 0; j < 3; j++) {
 			mesh[6 * i + 5].position[j] = model->vertices[3 * index + j];
 		}
 	}
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * 6 * model->numtriangles, mesh, GL_DYNAMIC_DRAW); 
-	glGenVertexArrays(1, &vaoHandle_line); 
-	glBindVertexArray(vaoHandle_line);
-	glEnableVertexAttribArray(0); 
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * 6 * model->numtriangles, mesh, GL_DYNAMIC_DRAW);
+	glBindVertexArray(vaoHandle_line[idx]);
+	glEnableVertexAttribArray(0);
 	//position
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point),(void*) 0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point), (void*)0);
+
+	// release model
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	
+}
+
+// init death effect while changing effect or model, or restart
+void initDeath(void) {
+	showMeshValue = expandValue = fadeValue = 0;
+	randomSeed = dis(gen);
+	pause = true;
+}
+void init(void)
+{
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glEnable(GL_CULL_FACE);
+	glEnable(GL_DEPTH_TEST);
+	
+	mainTextureID = loadTexture(main_tex_dir, 512, 256);
+
+	//you may need to do something here(create shaders/program(s) and create vbo(s)/vao from GLMmodel model)
+	for (int i = 0; i <= PROGRAM_NUM; i++) {
+		GLuint vert = createShader(vertfile[i], "vertex");
+		GLuint frag = createShader(fragfile[i], "fragment");
+		program[i] = createProgram(vert, frag);
+	}
+	// create vbos and vaos
+	glGenBuffers(OBJ_NUM, vbo_id);					// generate vbo buffers and assign their pointer to vboid
+	glGenVertexArrays(OBJ_NUM, vaoHandle);			// generate vao arrays and assign their pointer to vaoid
+	// create vbos and vaos of line mesh
+	glGenBuffers(OBJ_NUM, vbo_line_id);
+	glGenVertexArrays(OBJ_NUM, vaoHandle_line);
+	// load model into vbos and vaos
+	for (int i = 0; i < OBJ_NUM; i++) {
+		loadModel(obj_file_dir[i], i);
+	}
 	
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -344,7 +367,6 @@ void display(void)
 	glm::vec3 lightnow = glm::make_mat4(tmpmodelview) * glm::vec4(glm::make_vec3(light_pos),  1.0);
 
 	glPushMatrix();
-		glBindVertexArray(vaoHandle);
 		glTranslatef(ball_pos[0], ball_pos[1], ball_pos[2]);
 		glRotatef(ball_rot[0], 1, 0, 0);
 		glRotatef(ball_rot[1], 0, 1, 0);
@@ -352,6 +374,7 @@ void display(void)
 	// please try not to modify the previous block of code
 		
 	// you may need to do something here(pass uniform variable(s) to shader and render the model)
+		glBindVertexArray(vaoHandle[modelIdx]);
 		glUseProgram(program[mode]);
 			float modelview[16];
 			float proj[16];
@@ -388,43 +411,40 @@ void display(void)
 			glUniform4fv(loc, 1, Ks);
 			loc = glGetUniformLocation(program[mode], "alpha");
 			glUniform1f(loc, shine);
-			if (mode == 1) {					//explode effect
+			if (mode == 0) {					//explode effect
 				glDisable(GL_CULL_FACE);
 				loc = glGetUniformLocation(program[mode], "expandValue");
 				glUniform1f(loc, expandValue);
 				loc = glGetUniformLocation(program[mode], "showPercent");
-				glUniform1f(loc, showPercent);
+				glUniform1f(loc, showPercent[modelIdx]);
 				loc = glGetUniformLocation(program[mode], "meshEnlargeSize");
-				glUniform1f(loc, meshEnlargeSize);
+				glUniform1f(loc, meshEnlargeSize[modelIdx]);
 				loc = glGetUniformLocation(program[mode], "fadeValue");
 				glUniform1f(loc, fadeValue);
 				loc = glGetUniformLocation(program[mode], "seed");
 				glUniform1f(loc, randomSeed);
 			}
 
-			glDrawArrays(GL_TRIANGLES, 0, 3 * model->numtriangles);
+			glDrawArrays(GL_TRIANGLES, 0, 3 * models[modelIdx]->numtriangles);
 		glUseProgram(0);
 		
 		glEnable(GL_CULL_FACE);	
 		glBindTexture(GL_TEXTURE_2D, NULL);
-		glBindVertexArray(0);
 
-		//glDisable(GL_LIGHTING);
-		glBindVertexArray(vaoHandle_line);
-		glUseProgram(program[PROGRAM_NUM]);				
-			//float modelview[16];i
-			//float proj[16];
-			//GLint loc;
-			glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
-			glGetFloatv(GL_PROJECTION_MATRIX, proj);
-			loc = glGetUniformLocation(program[PROGRAM_NUM], "modelview"); //get the location of uniform variable in shader
-			glUniformMatrix4fv(loc, 1, GL_FALSE, modelview); //assign value to it 
-			loc = glGetUniformLocation(program[PROGRAM_NUM], "proj");
-			glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
-			glColor4f(0.f, 0.f, 0.f, 1.0f);
-			glLineWidth(2.f); 
-			glDrawArrays(GL_LINES, 0, 6 * model->numtriangles);
-		glUseProgram(0);
+		if (showMeshValue > 0) {
+			glBindVertexArray(vaoHandle_line[modelIdx]);
+			glUseProgram(program[PROGRAM_NUM]);
+				glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
+				glGetFloatv(GL_PROJECTION_MATRIX, proj);
+				loc = glGetUniformLocation(program[PROGRAM_NUM], "modelview"); //get the location of uniform variable in shader
+				glUniformMatrix4fv(loc, 1, GL_FALSE, modelview); //assign value to it 
+				loc = glGetUniformLocation(program[PROGRAM_NUM], "proj");
+				glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
+				glColor4f(0.f, 0.f, 0.f, 1.0f);
+				glLineWidth(2.f);
+				glDrawArrays(GL_LINES, 0, 6 * models[modelIdx]->numtriangles);
+			glUseProgram(0);
+		}
 		glBindVertexArray(0);
 		//glEnable(GL_LIGHTING);
 
@@ -441,13 +461,21 @@ void keyboard(unsigned char key, int x, int y) {
 	{	//ESC
 		break;
 	}
-	case 'b'://toggle mode
+	case 'b':			//toggle mode
 	{	
 		mode = (mode + 1) % PROGRAM_NUM;
-		if (mode == 1) {				// start explode
-			showMeshValue = expandValue = fadeValue = 0;
-			randomSeed = dis(gen);
-		}
+		initDeath();
+		break;
+	}
+	case 'm':			//change model
+	{
+		modelIdx = (modelIdx + 1) % OBJ_NUM;
+		initDeath();
+		break;
+	}
+	case ' ':			// pause
+	{
+		pause ^= true;
 		break;
 	}
 	case 'd':
@@ -624,7 +652,7 @@ void reshape(int width, int height)
 
 void motion(int x, int y)
 {
-	if (mleft)
+	if (mright)
 	{
 		eyep -= (x-mousex)*0.1;
 		eyet -= (y - mousey)*0.12;
@@ -650,6 +678,10 @@ void mouse(int button, int state, int x, int y)
 			mleft = true;
 			mousex = x;
 			mousey = y;
+			pause ^= true;
+			if (pause) {
+				initDeath();
+			}
 		}
 		else
 			mleft = false;
