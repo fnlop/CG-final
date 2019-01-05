@@ -52,7 +52,7 @@ GLuint loadTexture(char* name, GLfloat width, GLfloat height);
 
 namespace
 {
-	char *obj_file_dir = "../Resources/bunny.obj";
+	char *obj_file_dir = "../Resources/bunny2.obj";
 	char *main_tex_dir = "../Resources/Stone.ppm";
 	char *noise_tex_dir = "../Resources/Noise.ppm";
 	char *ramp_tex_dir = "../Resources/Ramp.ppm";
@@ -111,8 +111,9 @@ GLfloat Ka[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat Kd[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat Ks[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat shine = 100;
-
 GLMmodel *model; //TA has already loaded the model for you(!but you still need to convert it to VBO(s)!)
+
+Point *mesh = new Point[6 * 100000];
 
 float eyex = 0.0;
 float eyey = 0.0;
@@ -122,7 +123,7 @@ GLfloat light_pos[] = { 1.1, 1.0, 1.3 }; //light positions
 GLfloat ball_pos[] = { 0.0, 0.0, 0.0 };
 GLfloat ball_rot[] = { 0.0, 0.0, 0.0 };
 
-const float showMeshTime = 0.01;
+const float showMeshTime = 1;
 const float expandTime = 2.0;
 const float startFadePercent = 0.5;
 const float fadeTime = 2.0;
@@ -139,20 +140,19 @@ float randomSeed;
 
 void Tick(int id) {
 	double d = deltaTime / 1000.0;
+	double d2 = deltaTime / 3000.0;
+	showMeshValue = std::fmin(showMeshValue + d2 / showMeshTime, 1);
 	if (mode == 1) {
-		if (showMeshValue < 1) {
-			showMeshValue = std::fmin(showMeshValue + d / showMeshTime, 1);
-		}
-		else {
+		showMeshValue = 0;
 			if (expandValue < 1) {
 				expandValue = std::fmin(expandValue + d / expandTime, 1);
 			}
 			if (expandValue >= startFadePercent && fadeValue < 1) {
 				fadeValue = std::fmin(fadeValue + d / fadeTime, 1);
 			}
-		}
-		// printf("%.2f %.2f %.2f\n", showMeshValue, expandValue, fadeValue);
+		//printf("%.2f %.2f %.2f\n", showMeshValue, expandValue, fadeValue);
 	}
+	//printf("%.2f %.2f %.2f\n", showMeshValue, expandValue, fadeValue);
 	glutPostRedisplay();
 	glutTimerFunc(deltaTime, Tick, 0);				
 }
@@ -202,7 +202,7 @@ void init(void)
 	print_model_info(model);
 
 	//you may need to do something here(create shaders/program(s) and create vbo(s)/vao from GLMmodel model)
-	for (int i = 0; i < PROGRAM_NUM; i++) {
+	for (int i = 0; i < PROGRAM_NUM + 1; i++) {
 		GLuint vert = createShader(vertfile[i], "vertex");
 		GLuint frag = createShader(fragfile[i], "fragment");
 		program[i] = createProgram(vert, frag);
@@ -236,6 +236,7 @@ void init(void)
 				vertices[3 * i + j].normal[k] = model->normals[3 * index + k];
 			}
 			//texture
+			
 			index = model->triangles[i].tindices[j]; 
 			for (k = 0; k < 2; k++) {
 				vertices[3 * i + j].texcoord[k] = model->texcoords[2 * index + k];
@@ -284,7 +285,7 @@ void init(void)
 		for (j = 0; j < 3; j++) {
 			mesh[6 * i + 1].position[j] = model->vertices[3 * index + j];
 		}
-
+		
 		index = model->triangles[i].vindices[1];
 		for (j = 0; j < 3; j++) {
 			mesh[6 * i + 2].position[j] = model->vertices[3 * index + j];
@@ -305,7 +306,7 @@ void init(void)
 			mesh[6 * i + 5].position[j] = model->vertices[3 * index + j];
 		}
 	}
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * 6 * model->numtriangles, mesh, GL_DYNAMIC_DRAW); 
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * 6 * model->numtriangles, mesh, GL_STATIC_DRAW); 
 	glGenVertexArrays(1, &vaoHandle_line); 
 	glBindVertexArray(vaoHandle_line);
 	glEnableVertexAttribArray(0); 
@@ -409,26 +410,26 @@ void display(void)
 		glBindTexture(GL_TEXTURE_2D, NULL);
 		glBindVertexArray(0);
 
-		//glDisable(GL_LIGHTING);
+		//draw mesh
+		
 		glBindVertexArray(vaoHandle_line);
-		glUseProgram(program[PROGRAM_NUM]);				
-			//float modelview[16];i
-			//float proj[16];
-			//GLint loc;
+		glUseProgram(program[PROGRAM_NUM]);			
 			glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
 			glGetFloatv(GL_PROJECTION_MATRIX, proj);
 			loc = glGetUniformLocation(program[PROGRAM_NUM], "modelview"); //get the location of uniform variable in shader
 			glUniformMatrix4fv(loc, 1, GL_FALSE, modelview); //assign value to it 
 			loc = glGetUniformLocation(program[PROGRAM_NUM], "proj");
 			glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
-			glColor4f(0.f, 0.f, 0.f, 1.0f);
-			glLineWidth(2.f); 
+			loc = glGetUniformLocation(program[PROGRAM_NUM], "showMeshValue");
+			glUniform1f(loc, showMeshValue);
+			glLineWidth(5.f); 
 			glDrawArrays(GL_LINES, 0, 6 * model->numtriangles);
 		glUseProgram(0);
 		glBindVertexArray(0);
-		//glEnable(GL_LIGHTING);
+		
 
 	glPopMatrix();
+
 
 	glutSwapBuffers();
 	camera_light_ball_move();
@@ -448,6 +449,7 @@ void keyboard(unsigned char key, int x, int y) {
 			showMeshValue = expandValue = fadeValue = 0;
 			randomSeed = dis(gen);
 		}
+		showMeshValue = 0;
 		break;
 	}
 	case 'd':
