@@ -15,11 +15,11 @@ const vec3 glowColor = vec3(120, 120, 255) / 255.0;
 void main() {
 
 	float v = rand(PositionToFrag);
-
+	/*
 	if(rand(vec2(v,v)) > 0.487){
 		discard;
 	}
-	
+	*/
 
 	if(showMeshValue == 0)
 		outColor = vec4(0.0,0.0,0.0, 0.0);
