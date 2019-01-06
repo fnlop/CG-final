@@ -103,10 +103,10 @@ GLuint vbo_line_id[OBJ_NUM];
 GLuint vaoHandle[OBJ_NUM];
 GLuint vaoHandle_line[OBJ_NUM];
 int modelIdx = 0;
-GLuint program[PROGRAM_NUM + 1];
+GLuint program[PROGRAM_NUM + 2];
 int mode = 0;
-char *vertfile[PROGRAM_NUM + 1] = {"shaders/explode.vert", "shaders/mesh.vert"};
-char *fragfile[PROGRAM_NUM + 1] = {"shaders/explode.frag", "shaders/mesh.frag"};
+char *vertfile[PROGRAM_NUM + 2] = {"shaders/explode.vert", "shaders/mesh.vert"};
+char *fragfile[PROGRAM_NUM + 2] = {"shaders/explode.frag", "shaders/mesh.frag"};
 GLfloat Ka[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat Kd[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat Ks[4] = { 1.0, 1.0, 1.0, 1.0 };
@@ -114,7 +114,6 @@ GLfloat shine = 100;
 
 GLMmodel *models[OBJ_NUM]; //TA has already loaded the model for you(!but you still need to convert it to VBO(s)!)
 
-Point *mesh = new Point[6 * 100000];
 
 float eyex = 0.0;
 float eyey = 0.0;
@@ -132,6 +131,8 @@ bool pause = true;
 float showMeshValue = 0.0;
 float expandValue = 0.0;
 float fadeValue = 0.0;
+//float showPercent = 0.01;				// discard some traingles of OBJ with complicate mesh for better visual effect
+//float meshEnlargeSize = 10;				// enlarge size of mesh after discarding
 // discard some traingles of OBJ with complicate mesh for better visual effect, differ with different models
 float showPercent[OBJ_NUM] = { 0.01, 0.5, 0.1 };
 // enlarge size of mesh after discarding, differ with different models and showPercent
@@ -260,39 +261,68 @@ void loadModel(char *path, int idx) {
 
 	//line vbo
 	//create vbo , need vertex information
-	
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_line_id[idx]); //bind with the buffer , GL_ARRAY_BUFFER is for vertex type
 	Point *mesh = new Point[6 * model->numtriangles];
-	for (unsigned int i = 0; i < model->numtriangles; i++) {
+	for (unsigned int i = 0; i < model->numtriangles; i+=1) {
 		index = model->triangles[i].vindices[0];
 		int j;
-		for (j = 0; j < 3; j++) {
-			mesh[6 * i + 0].position[j] = model->vertices[3 * index + j];
-		}
 
+		GLfloat t[3] = { 0 };
+		index = model->triangles[i].vindices[0];
+		for (j = 0; j < 3; j++) {
+			t[j] += model->vertices[3 * index + j];
+		}
 		index = model->triangles[i].vindices[1];
 		for (j = 0; j < 3; j++) {
-			mesh[6 * i + 1].position[j] = model->vertices[3 * index + j];
+			t[j] += model->vertices[3 * index + j];
+		}
+		index = model->triangles[i].vindices[2];
+		for (j = 0; j < 3; j++) {
+			t[j] += model->vertices[3 * index + j];
+		}
+		for (j = 0; j < 3; j++)
+			t[j] /= 3;
+		/*
+		index = model->triangles[i].nindices[j];
+		for (k = 0; k < 3; k++) {
+			vertices[3 * i + j].normal[k] = model->normals[3 * index + k];
+		}*/
+
+		int scale = 0 ;
+		index = model->triangles[i].vindices[0];
+		for (j = 0; j < 3; j++) {
+			GLfloat tmp = t[j] - model->vertices[3 * index + j];
+			mesh[6 * i + 0].position[j] = model->vertices[3 * index + j] + scale * tmp;
 		}
 		
 		index = model->triangles[i].vindices[1];
 		for (j = 0; j < 3; j++) {
-			mesh[6 * i + 2].position[j] = model->vertices[3 * index + j];
+			GLfloat tmp = t[j] - model->vertices[3 * index + j];
+			mesh[6 * i + 1].position[j] = model->vertices[3 * index + j] + scale * tmp;
 		}
-
+		
+		index = model->triangles[i].vindices[1];
+		for (j = 0; j < 3; j++) {
+			GLfloat tmp = t[j] - model->vertices[3 * index + j];
+			mesh[6 * i + 2].position[j] = model->vertices[3 * index + j] + scale * tmp;
+		}
+		
 		index = model->triangles[i].vindices[2];
 		for (j = 0; j < 3; j++) {
-			mesh[6 * i + 3].position[j] = model->vertices[3 * index + j];
+			GLfloat tmp = t[j] - model->vertices[3 * index + j];
+			mesh[6 * i + 3].position[j] = model->vertices[3 * index + j] + scale * tmp;
 		}
-
+		
 		index = model->triangles[i].vindices[2];
 		for (j = 0; j < 3; j++) {
-			mesh[6 * i + 4].position[j] = model->vertices[3 * index + j];
+			GLfloat tmp = t[j] - model->vertices[3 * index + j];
+			mesh[6 * i + 4].position[j] = model->vertices[3 * index + j] + scale * tmp;
 		}
 
 		index = model->triangles[i].vindices[0];
 		for (j = 0; j < 3; j++) {
-			mesh[6 * i + 5].position[j] = model->vertices[3 * index + j];
+			GLfloat tmp = t[j] - model->vertices[3 * index + j];
+			mesh[6 * i + 5].position[j] = model->vertices[3 * index + j] + scale * tmp;
 		}
 	}
 	glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * 6 * model->numtriangles, mesh, GL_DYNAMIC_DRAW);
@@ -436,6 +466,8 @@ void display(void)
 		glBindTexture(GL_TEXTURE_2D, NULL);
 
 		//draw mesh
+
+
 		if (showMeshValue > 0 && showMeshValue < 1) {
 			glBindVertexArray(vaoHandle_line[modelIdx]);
 			glUseProgram(program[PROGRAM_NUM]);			
@@ -447,13 +479,12 @@ void display(void)
 				glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
 				loc = glGetUniformLocation(program[PROGRAM_NUM], "showMeshValue");
 				glUniform1f(loc, showMeshValue);
-				glLineWidth(5.f); 
+				glLineWidth(2.f); 
 				glDrawArrays(GL_LINES, 0, 6 * models[modelIdx]->numtriangles);
 			glUseProgram(0);
 		}
 		glBindVertexArray(0);
 		
-
 	glPopMatrix();
 
 
