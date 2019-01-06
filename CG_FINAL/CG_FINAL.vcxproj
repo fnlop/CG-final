@@ -131,18 +131,22 @@
     <ClCompile Include="glm\glm_util.c" />
     <ClCompile Include="glm_helper.c" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Model.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\shader_lib\shader.h" />
     <ClInclude Include="glm\glm.h" />
     <ClInclude Include="glm\glmint.h" />
     <ClInclude Include="glm_helper.h" />
+    <ClInclude Include="Model.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\dissolving.frag" />
     <None Include="shaders\dissolving.vert" />
     <None Include="shaders\explode.frag" />
     <None Include="shaders\explode.vert" />
+    <None Include="shaders\explode_point.frag" />
+    <None Include="shaders\explode_point.vert" />
     <None Include="shaders\mesh.frag" />
     <None Include="shaders\mesh.vert" />
     <None Include="shaders\phong.frag" />
