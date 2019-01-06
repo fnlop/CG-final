@@ -246,7 +246,7 @@ void init(void) {
 	for (int idx = 0; idx < OBJ_NUM; idx++) {
 		models[idx] = ModelGroup(obj_file_dir[idx]);
 		models[idx].constructVO(vbo_id[idx], vaoHandle[idx]);
-		models[idx].constructVO(vbo_line_id[idx], vaoHandle_line[idx]);
+		models[idx].constructLineVO(vbo_line_id[idx], vaoHandle_line[idx]);
 	}
 	
 	glEnable(GL_BLEND);
@@ -377,7 +377,7 @@ void display(void)
 				loc = glGetUniformLocation(program_line[mode], "showMeshValue");
 				glUniform1f(loc, showMeshValue);
 				glLineWidth(2.f);
-				glDrawArrays(GL_LINES, 0, 2 * models[modelIdx].getVertexNum());
+				glDrawArrays(GL_LINES, 0, 6 * models[modelIdx].getVertexNum());
 			glUseProgram(0);
 		}
 		glBindVertexArray(0);
