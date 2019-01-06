@@ -16,7 +16,7 @@ void main() {
 
 	float v = rand(PositionToFrag);
 	/*
-	if(rand(vec2(v,v)) > 0.487){
+	if(rand(vec2(v,v)) > 0.01){
 		discard;
 	}
 	*/

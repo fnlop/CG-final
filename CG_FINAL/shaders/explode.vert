@@ -32,12 +32,19 @@ vec3 randVec3(vec3);
 mat4 rotationMatrix(vec3, float);
 
 void main() {
-	// random rotation
-	vec3 rotatePosition = vec3(rotationMatrix(randVec3(tPosition), rand(tPosition) * 2 * PI * expandValue) * vec4(Position - tPosition, 1.0)) + tPosition;
-	// push to outside and enlarge mesh with some random in scale
-	vec3 expandPosition = tPosition * (1 + (expand - 1) * expandValue) + (rotatePosition - tPosition) * meshEnlargeSize * (0.5 + rand(tPosition));
-	vec4 mdposition = modelview * vec4(expandPosition, 1.0);
-	gl_Position = proj * modelview * vec4(expandPosition, 1.0);
+	vec4 mdposition;
+	if (expandValue == 0) {							// not explode yet -> normal phong shading
+		mdposition = modelview * vec4(Position, 1.0);
+		gl_Position = proj * modelview * vec4(Position, 1.0);
+	}
+	else {											// explode effect
+		// random rotation
+		vec3 rotatePosition = vec3(rotationMatrix(randVec3(tPosition), rand(tPosition) * 2 * PI * expandValue) * vec4(Position - tPosition, 1.0)) + tPosition;
+		// push to outside and enlarge mesh with some random in scale
+		vec3 expandPosition = tPosition * (1 + (expand - 1) * expandValue) + (rotatePosition - tPosition) * meshEnlargeSize * (0.5 + rand(tPosition));
+		mdposition = modelview * vec4(expandPosition, 1.0);
+		gl_Position = proj * modelview * vec4(expandPosition, 1.0);
+	}
 
 	texturetofrag = Texture;
 	L = normalize(vec3(mdposition) -lightnow);			// vector of incoming light 
