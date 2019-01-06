@@ -4,46 +4,41 @@
 #include "../GL/glew.h"
 #include "../GL/glut.h"
 #include "glm/glm/glm.hpp"
-#include "Model.h"
+#include "ModelGroup.h"
 
-Model::Model() {
+ModelGroup::ModelGroup() : radius(1.0){
 	model = NULL;
 	vertices = NULL;
-	radius = 1.0;
+	mesh = NULL;
+	vboId = vaoId = vboLineId = vaoLineId = 0;
 }
-Model::Model(char *path) : Model() {
+ModelGroup::ModelGroup(char *path) : ModelGroup() {
 	loadModel(path);
 }
-Model::Model(Model&& other) {
-	model = other.model;
-	vertices = other.vertices;
-	ymin = other.ymin;
-	ymax = other.ymax;
-	radius = other.radius;
-	other.model = NULL;
-	other.vertices = NULL;
+ModelGroup::ModelGroup(ModelGroup&& other) {
+	*this = std::move(other);
 }
-Model& Model::operator=(Model&& other) {
-	model = other.model;
-	vertices = other.vertices;
-	ymin = other.ymin;
-	ymax = other.ymax;
-	radius = other.radius;
+ModelGroup& ModelGroup::operator=(ModelGroup&& other) {
+	*this = other;
 	other.model = NULL;
 	other.vertices = NULL;
+	other.mesh = NULL;
 	return *this;
 }
 
-Model::~Model() {
+ModelGroup::~ModelGroup() {
 	if (model != NULL) {
 		glmDelete(model);
 	}
 	if (vertices != NULL) {
 		delete[] vertices;
 	}
+	if (mesh != NULL) {
+		delete[] mesh;
+	}
 }
 
-void Model::loadModel(char * path) {
+void ModelGroup::loadModel(char * path) {
 	// load model obj file
 	model = glmReadOBJ(path);			//object file
 	glmUnitize(model);
@@ -96,9 +91,72 @@ void Model::loadModel(char * path) {
 		if (vertices[3 * i + 0].trianglePosition[1] < ymin)
 			ymin = vertices[3 * i + 0].trianglePosition[1];
 	}
+
+	// create mesh vertices
+	Point *mesh = new Point[6 * model->numtriangles];
+	for (unsigned int i = 0; i < model->numtriangles; i += 1) {
+		index = model->triangles[i].vindices[0];
+		int j;
+
+		GLfloat t[3] = { 0 };
+		index = model->triangles[i].vindices[0];
+		for (j = 0; j < 3; j++) {
+			t[j] += model->vertices[3 * index + j];
+		}
+		index = model->triangles[i].vindices[1];
+		for (j = 0; j < 3; j++) {
+			t[j] += model->vertices[3 * index + j];
+		}
+		index = model->triangles[i].vindices[2];
+		for (j = 0; j < 3; j++) {
+			t[j] += model->vertices[3 * index + j];
+		}
+		for (j = 0; j < 3; j++)
+			t[j] /= 3;
+
+		int scale = 0;
+		index = model->triangles[i].vindices[0];
+		for (j = 0; j < 3; j++) {
+			GLfloat tmp = t[j] - model->vertices[3 * index + j];
+			mesh[6 * i + 0].position[j] = model->vertices[3 * index + j] + scale * tmp;
+		}
+
+		index = model->triangles[i].vindices[1];
+		for (j = 0; j < 3; j++) {
+			GLfloat tmp = t[j] - model->vertices[3 * index + j];
+			mesh[6 * i + 1].position[j] = model->vertices[3 * index + j] + scale * tmp;
+		}
+
+		index = model->triangles[i].vindices[1];
+		for (j = 0; j < 3; j++) {
+			GLfloat tmp = t[j] - model->vertices[3 * index + j];
+			mesh[6 * i + 2].position[j] = model->vertices[3 * index + j] + scale * tmp;
+		}
+
+		index = model->triangles[i].vindices[2];
+		for (j = 0; j < 3; j++) {
+			GLfloat tmp = t[j] - model->vertices[3 * index + j];
+			mesh[6 * i + 3].position[j] = model->vertices[3 * index + j] + scale * tmp;
+		}
+
+		index = model->triangles[i].vindices[2];
+		for (j = 0; j < 3; j++) {
+			GLfloat tmp = t[j] - model->vertices[3 * index + j];
+			mesh[6 * i + 4].position[j] = model->vertices[3 * index + j] + scale * tmp;
+		}
+
+		index = model->triangles[i].vindices[0];
+		for (j = 0; j < 3; j++) {
+			GLfloat tmp = t[j] - model->vertices[3 * index + j];
+			mesh[6 * i + 5].position[j] = model->vertices[3 * index + j] + scale * tmp;
+		}
+	}
 }
 
-void Model::constructVO(GLuint vboid, GLuint vaoid) {
+void ModelGroup::constructVO(GLuint vboid, GLuint vaoid) {
+	vboId = vboid;
+	vaoId = vaoid;
+
 	// ---- generate VBO ----
 	glBindBuffer(GL_ARRAY_BUFFER, vboid); //bind with the buffer , GL_ARRAY_BUFFER is for vertex type
 	// use vertices to construct VBO
@@ -123,19 +181,37 @@ void Model::constructVO(GLuint vboid, GLuint vaoid) {
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
+void ModelGroup::constructLineVO(GLuint vboid, GLuint vaoid) {
+	vboLineId = vboid;
+	vaoLineId = vaoid;
+	// ---- generate VBO ----
+	glBindBuffer(GL_ARRAY_BUFFER, vboid); //bind with the buffer , GL_ARRAY_BUFFER is for vertex type
+	// use vertices to construct VBO
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * 6 * model->numtriangles, mesh, GL_STATIC_DRAW);
 
-int Model::getVertexNum(void) {
+	// ---- generate VAO ----
+	glBindVertexArray(vaoid);
+	glEnableVertexAttribArray(0);
+	//position
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point), (void*)0);
+
+	// unbind
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+int ModelGroup::getVertexNum(void) {
 	return 3 * model->numtriangles;
 }
 
-GLMmodel* Model::getGLMmodel(void) {
+GLMmodel* ModelGroup::getGLMmodel(void) {
 	return model;
 }
 
-float Model::getBoundingRadius(void) {
+float ModelGroup::getBoundingRadius(void) {
 	return radius;
 }
 
-std::pair<float, float> Model::getBoundingY() {
+std::pair<float, float> ModelGroup::getBoundingY() {
 	return std::pair<float, float>(ymin, ymax);
 }

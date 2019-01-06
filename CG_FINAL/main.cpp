@@ -13,7 +13,7 @@ CG Final - Death Effect
 #include "glm/glm.h"
 #include "glm/glm/glm.hpp"
 #include "glm/glm/gtc/type_ptr.hpp"
-#include "Model.h"
+#include "ModelGroup.h"
 
 extern "C"
 {
@@ -23,12 +23,6 @@ extern "C"
 #define PROGRAM_NUM (3)
 #define OBJ_NUM (3)
 #define deltaTime (10)		// in ms (1e-3 second)
-
-struct Point
-{
-	GLfloat position[3];
-};
-typedef struct Point Point;
 
 //no need to modify the following function declarations and gloabal variables
 void init(void);
@@ -94,7 +88,7 @@ GLuint mainTextureID; // TA has already loaded this texture for you
 
 // models
 int modelIdx = 0;
-Model models[OBJ_NUM];
+ModelGroup models[OBJ_NUM];
 GLuint vbo_id[OBJ_NUM];
 GLuint vbo_line_id[OBJ_NUM];
 GLuint vaoHandle[OBJ_NUM];
@@ -108,11 +102,14 @@ char *vertfile[PROGRAM_NUM] = {"shaders/explode.vert", "shaders/explode_scanline
 char *fragfile[PROGRAM_NUM] = {"shaders/explode.frag", "shaders/explode_scanline.frag" , "shaders/explode_point.frag" };
 char *vertfile_line[PROGRAM_NUM] = { "shaders/mesh.vert", "shaders/mesh.vert", "shaders/mesh.vert" };
 char *fragfile_line[PROGRAM_NUM] = { "shaders/mesh.frag", "shaders/mesh.frag", "shaders/mesh.frag" };
+
+// some basic parameters
+glm::vec2 windowSize(512.0, 512.0);
+
 GLfloat Ka[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat Kd[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat Ks[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat shine = 100;
-glm::vec2 windowSize(512.0, 512.0);
 
 float eyex = 0.0;
 float eyey = 0.0;
@@ -212,85 +209,6 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
-void loadModel(char *path, int idx) {
-	models[idx] = Model(path);
-	models[idx].constructVO(vbo_id[idx], vaoHandle[idx]);
-
-	//line vbo
-	GLMmodel *model = models[idx].getGLMmodel();			
-	
-	//create vbo , need vertex information
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_line_id[idx]); //bind with the buffer , GL_ARRAY_BUFFER is for vertex type
-	Point *mesh = new Point[6 * model->numtriangles];
-	int index;
-	for (unsigned int i = 0; i < model->numtriangles; i+=1) {
-		index = model->triangles[i].vindices[0];
-		int j;
-
-		GLfloat t[3] = { 0 };
-		index = model->triangles[i].vindices[0];
-		for (j = 0; j < 3; j++) {
-			t[j] += model->vertices[3 * index + j];
-		}
-		index = model->triangles[i].vindices[1];
-		for (j = 0; j < 3; j++) {
-			t[j] += model->vertices[3 * index + j];
-		}
-		index = model->triangles[i].vindices[2];
-		for (j = 0; j < 3; j++) {
-			t[j] += model->vertices[3 * index + j];
-		}
-		for (j = 0; j < 3; j++)
-			t[j] /= 3;
-
-		int scale = 0 ;
-		index = model->triangles[i].vindices[0];
-		for (j = 0; j < 3; j++) {
-			GLfloat tmp = t[j] - model->vertices[3 * index + j];
-			mesh[6 * i + 0].position[j] = model->vertices[3 * index + j] + scale * tmp;
-		}
-		
-		index = model->triangles[i].vindices[1];
-		for (j = 0; j < 3; j++) {
-			GLfloat tmp = t[j] - model->vertices[3 * index + j];
-			mesh[6 * i + 1].position[j] = model->vertices[3 * index + j] + scale * tmp;
-		}
-		
-		index = model->triangles[i].vindices[1];
-		for (j = 0; j < 3; j++) {
-			GLfloat tmp = t[j] - model->vertices[3 * index + j];
-			mesh[6 * i + 2].position[j] = model->vertices[3 * index + j] + scale * tmp;
-		}
-		
-		index = model->triangles[i].vindices[2];
-		for (j = 0; j < 3; j++) {
-			GLfloat tmp = t[j] - model->vertices[3 * index + j];
-			mesh[6 * i + 3].position[j] = model->vertices[3 * index + j] + scale * tmp;
-		}
-		
-		index = model->triangles[i].vindices[2];
-		for (j = 0; j < 3; j++) {
-			GLfloat tmp = t[j] - model->vertices[3 * index + j];
-			mesh[6 * i + 4].position[j] = model->vertices[3 * index + j] + scale * tmp;
-		}
-
-		index = model->triangles[i].vindices[0];
-		for (j = 0; j < 3; j++) {
-			GLfloat tmp = t[j] - model->vertices[3 * index + j];
-			mesh[6 * i + 5].position[j] = model->vertices[3 * index + j] + scale * tmp;
-		}
-	}
-	glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * 6 * model->numtriangles, mesh, GL_DYNAMIC_DRAW);
-	glBindVertexArray(vaoHandle_line[idx]);
-	glEnableVertexAttribArray(0);
-	//position
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point), (void*)0);
-
-	// unbind
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
 // init death effect while changing effect or model, or restart
 void initDeath(void) {
 	showMeshValue = expandValue = fadeValue = 0;
@@ -299,8 +217,7 @@ void initDeath(void) {
 	randomSeed = dis(gen);
 	pause = true;
 }
-void init(void)
-{
+void init(void) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glEnable(GL_CULL_FACE);
@@ -326,8 +243,10 @@ void init(void)
 	glGenBuffers(OBJ_NUM, vbo_line_id);
 	glGenVertexArrays(OBJ_NUM, vaoHandle_line);
 	// load model into vbos and vaos
-	for (int i = 0; i < OBJ_NUM; i++) {
-		loadModel(obj_file_dir[i], i);
+	for (int idx = 0; idx < OBJ_NUM; idx++) {
+		models[idx] = ModelGroup(obj_file_dir[idx]);
+		models[idx].constructVO(vbo_id[idx], vaoHandle[idx]);
+		models[idx].constructVO(vbo_line_id[idx], vaoHandle_line[idx]);
 	}
 	
 	glEnable(GL_BLEND);
@@ -430,8 +349,6 @@ void display(void)
 				glUniform1f(loc, models[modelIdx].getBoundingY().first);
 				loc = glGetUniformLocation(program[mode], "max_y");
 				glUniform1f(loc, models[modelIdx].getBoundingY().second);
-				loc = glGetUniformLocation(program[mode], "fadeValue");
-				glUniform1f(loc, fadeValue);
 			}
 			else if (mode == 2) {						// explode from point
 				loc = glGetUniformLocation(program[mode], "mRaycastPoint");
@@ -744,7 +661,6 @@ void mouse(int button, int state, int x, int y)
 					glm::vec4 mRaycastPoint = glm::inverse(glm::make_mat4(modelview)) * mvRaycastPoint;
 					raycastPoint = glm::vec3( mRaycastPoint / mRaycastPoint.w);
 				glPopMatrix();
-
 				//printf("model: (%.2f %.2f %.2f)\n", raycastPoint.x, raycastPoint.y, raycastPoint.z);
 			}
 		}

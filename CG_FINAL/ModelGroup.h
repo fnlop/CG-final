@@ -10,26 +10,39 @@ struct Vertex
 	GLfloat trianglePosition[3];
 };
 typedef struct Vertex Vertex;
+struct Point
+{
+	GLfloat position[3];
+};
+typedef struct Point Point;
 
-class Model
+class ModelGroup
 {
 	public:
-		Model();
-		Model(char *);
-		Model(Model&&);
-		Model& operator=(Model&&);
-		~Model();
+		ModelGroup();
+		ModelGroup(char *);
+		ModelGroup(ModelGroup&&);
+		ModelGroup& operator=(ModelGroup&&);
+		~ModelGroup();
 		void loadModel(char *);
 		void constructVO(GLuint, GLuint);
+		void constructLineVO(GLuint, GLuint);
 		int getVertexNum(void);
 		GLMmodel* getGLMmodel(void);
 		float getBoundingRadius(void);
 		std::pair<float, float> getBoundingY();
 	private:
+		ModelGroup& operator=(const ModelGroup&) = default;
+	private:
 		GLMmodel *model;
 		Vertex *vertices;
+		Point *mesh;
 		float ymin;
 		float ymax;
 		float radius;
+		GLuint vboId;
+		GLuint vaoId;
+		GLuint vboLineId;
+		GLuint vaoLineId;
 };
 

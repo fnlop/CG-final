@@ -58,8 +58,14 @@ void main() {
 	// broken fragments color
 	vec4 fragColor = glowColor;
 	fragColor.a *= 1 - (clamp(value, startFadePercent, 1) - startFadePercent) / (totalFadePercent - startFadePercent);
-	// interpolation by showMeshValue and value
-	outColor = phongColor + clamp((value + changeColorPercent) / changeColorPercent, showMeshValue * maxShowMeshColorPercent, 1) * (fragColor - phongColor);
+	if (gl_FrontFacing) {
+		// interpolation by showMeshValue and value
+		outColor = phongColor + clamp((value + changeColorPercent) / changeColorPercent, showMeshValue * maxShowMeshColorPercent, 1) * (fragColor - phongColor);
+	}
+	else {
+		// directy use fragColor
+		outColor = fragColor;
+	}
 }
 
 // magical random function

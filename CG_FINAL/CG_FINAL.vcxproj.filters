@@ -29,7 +29,7 @@
     <ClCompile Include="glm\glmimg_sim.c">
       <Filter>glm</Filter>
     </ClCompile>
-    <ClCompile Include="Model.cpp" />
+    <ClCompile Include="ModelGroup.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\shader_lib\shader.h" />
@@ -42,7 +42,7 @@
     <ClInclude Include="glm\glmint.h">
       <Filter>glm</Filter>
     </ClInclude>
-    <ClInclude Include="Model.h" />
+    <ClInclude Include="ModelGroup.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="glm">
