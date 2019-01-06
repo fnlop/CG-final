@@ -13,6 +13,7 @@ typedef struct Vertex Vertex;
 struct Point
 {
 	GLfloat position[3];
+	GLfloat centerPosition[3];
 };
 typedef struct Point Point;
 
