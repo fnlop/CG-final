@@ -180,8 +180,8 @@ void ModelGroup::constructLineVO(GLuint vboid, GLuint vaoid) {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-int ModelGroup::getVertexNum(void) {
-	return 3 * model->numtriangles;
+int ModelGroup::getTriangleNum(void) {
+	return model->numtriangles;
 }
 
 GLMmodel* ModelGroup::getGLMmodel(void) {

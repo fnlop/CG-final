@@ -358,7 +358,7 @@ void display(void)
 				loc = glGetUniformLocation(program[mode], "longestDis");
 				glUniform1f(loc, models[modelIdx].getBoundingRadius() + glm::length(raycastPoint));
 			}
-			glDrawArrays(GL_TRIANGLES, 0, models[modelIdx].getVertexNum());
+			glDrawArrays(GL_TRIANGLES, 0, 3 * models[modelIdx].getTriangleNum());
 		glUseProgram(0);
 		
 		glEnable(GL_CULL_FACE);	
@@ -377,7 +377,7 @@ void display(void)
 				loc = glGetUniformLocation(program_line[mode], "showMeshValue");
 				glUniform1f(loc, showMeshValue);
 				glLineWidth(2.f);
-				glDrawArrays(GL_LINES, 0, 6 * models[modelIdx].getVertexNum());
+				glDrawArrays(GL_LINES, 0, 6 * models[modelIdx].getTriangleNum());
 			glUseProgram(0);
 		}
 		glBindVertexArray(0);
