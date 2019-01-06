@@ -105,16 +105,15 @@ GLuint vaoHandle_line[OBJ_NUM];
 int modelIdx = 0;
 GLuint program[PROGRAM_NUM];
 GLuint program_line[PROGRAM_NUM];
-int mode = 0;
-char *vertfile[PROGRAM_NUM] = {"shaders/explode.vert", "shaders/explode.vert" , "shaders/explode.vert" };
-char *fragfile[PROGRAM_NUM] = {"shaders/explode.frag", "shaders/explode.frag" , "shaders/explode.frag" };
+int mode = 1;
+char *vertfile[PROGRAM_NUM] = {"shaders/explode.vert", "shaders/explode_scanline.vert" , "shaders/explode.vert" };
+char *fragfile[PROGRAM_NUM] = {"shaders/explode.frag", "shaders/explode_scanline.frag" , "shaders/explode.frag" };
 char *vertfile_line[PROGRAM_NUM] = { "shaders/mesh.vert", "shaders/mesh.vert", "shaders/mesh.vert" };
 char *fragfile_line[PROGRAM_NUM] = { "shaders/mesh.frag", "shaders/mesh.frag", "shaders/mesh.frag" };
 GLfloat Ka[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat Kd[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat Ks[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat shine = 100;
-
 GLMmodel *models[OBJ_NUM]; //TA has already loaded the model for you(!but you still need to convert it to VBO(s)!)
 
 
@@ -130,10 +129,12 @@ const float showMeshTime = 1.0;
 const float expandTime = 2.0;
 const float startFadePercent = 0.5;
 const float fadeTime = 2.0;
+const float scanTime = 2.0;
 bool pause = true;
 float showMeshValue = 0.0;
 float expandValue = 0.0;
 float fadeValue = 0.0;
+float scanlineValue = -0.1;
 //float showPercent = 0.01;				// discard some traingles of OBJ with complicate mesh for better visual effect
 //float meshEnlargeSize = 10;				// enlarge size of mesh after discarding
 // discard some traingles of OBJ with complicate mesh for better visual effect, differ with different models
@@ -145,7 +146,9 @@ float meshEnlargeSize[OBJ_NUM] = { 10, 1, 3 };
 std::default_random_engine gen = std::default_random_engine((std::random_device())());
 std::uniform_real_distribution<float> dis(0, 1);
 float randomSeed;
-
+//recording min and max of vertex.y for scanline purpose
+float min_y[OBJ_NUM];
+float max_y[OBJ_NUM];
 void Tick(int id) {
 	double d = deltaTime / 1000.0;
 	if (!pause) {
@@ -159,8 +162,12 @@ void Tick(int id) {
 			if (expandValue >= startFadePercent && fadeValue < 1) {
 				fadeValue = std::fmin(fadeValue + d / fadeTime, 1);
 			}
+			if (scanlineValue < 1.5) {
+				scanlineValue = std::fmin(scanlineValue + d / scanTime, 1.5);
+			}
 		}
 		//printf("%.2f %.2f %.2f\n", showMeshValue, expandValue, fadeValue);
+
 	}
 	glutPostRedisplay();
 	glutTimerFunc(deltaTime, Tick, 0);				
@@ -199,7 +206,7 @@ int main(int argc, char *argv[]) {
 void loadModel(char *path, int idx) {
 	// load model obj file
 	GLMmodel *model = glmReadOBJ(path);			//object file
-	glmUnitize(model);
+	glmUnitize(model);		
 	glmFacetNormals(model);
 	glmVertexNormals(model, 90.0, GL_FALSE);
 	models[idx] = model;
@@ -210,11 +217,13 @@ void loadModel(char *path, int idx) {
 //		GLuint vindices[3];           /* array of triangle vertex indices */
 //		GLuint nindices[3];           /* array of triangle normal indices */
 //		GLuint tindices[3];           /* array of triangle texcoord indices*/
-//		GLuint findex;                /* index of triangle facet normal */
+//		GLuint findex;                /* index of triangle facet  normal */
 
 	// ---- generate VBO ----
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_id[idx]); //bind with the buffer , GL_ARRAY_BUFFER is for vertex type
 	int index;
+	float min = 0;
+	float max = 0;
 	Vertex *vertices = new Vertex[3 * model->numtriangles];			//total vertices
 	for (unsigned int i = 0; i < model->numtriangles; i++) {		//all triangles
 		GLfloat tpos[3] = { 0, 0, 0 };
@@ -243,7 +252,14 @@ void loadModel(char *path, int idx) {
 				vertices[3 * i + j].trianglePosition[k] = tpos[k] / 3;
 			}
 		}
+		if (vertices[3 * i + 0].trianglePosition[1] > max)
+			max = vertices[3 * i + 0].trianglePosition[1];
+		if (vertices[3 * i + 0].trianglePosition[1] < min)
+			min = vertices[3 * i + 0].trianglePosition[1];
 	}
+	min_y[idx] = min;
+	max_y[idx] = max;
+	//printf("%.2f %.2f \n", min, max);
 	// use vertices to construct VBO
 	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * 3 * model->numtriangles, vertices, GL_STATIC_DRAW);
 	
@@ -343,6 +359,7 @@ void loadModel(char *path, int idx) {
 // init death effect while changing effect or model, or restart
 void initDeath(void) {
 	showMeshValue = expandValue = fadeValue = 0;
+	scanlineValue = -0.1;
 	randomSeed = dis(gen);
 	pause = true;
 }
@@ -412,10 +429,11 @@ void display(void)
 		glRotatef(ball_rot[1], 0, 1, 0);
 		glRotatef(ball_rot[2], 0, 0, 1);
 	// please try not to modify the previous block of code
-		
+	
 	// you may need to do something here(pass uniform variable(s) to shader and render the model)
-		glBindVertexArray(vaoHandle[modelIdx]);
-		glUseProgram(program[mode]);
+		if (mode == 0) { //original explosion
+			glBindVertexArray(vaoHandle[modelIdx]);
+			glUseProgram(program[mode]);
 			float modelview[16];
 			float proj[16];
 			GLint loc;
@@ -469,15 +487,15 @@ void display(void)
 			}
 
 			glDrawArrays(GL_TRIANGLES, 0, 3 * models[modelIdx]->numtriangles);
-		glUseProgram(0);
-		
-		glEnable(GL_CULL_FACE);	
-		glBindTexture(GL_TEXTURE_2D, NULL);
+			glUseProgram(0);
 
-		//draw mesh
-		if (showMeshValue > 0 && showMeshValue < 1) {
-			glBindVertexArray(vaoHandle_line[modelIdx]);
-			glUseProgram(program_line[mode]);			
+			glEnable(GL_CULL_FACE);
+			glBindTexture(GL_TEXTURE_2D, NULL);
+
+			//draw mesh
+			if (showMeshValue > 0 && showMeshValue < 1) {
+				glBindVertexArray(vaoHandle_line[modelIdx]);
+				glUseProgram(program_line[mode]);
 				glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
 				glGetFloatv(GL_PROJECTION_MATRIX, proj);
 				loc = glGetUniformLocation(program_line[mode], "modelview"); //get the location of uniform variable in shader
@@ -486,12 +504,99 @@ void display(void)
 				glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
 				loc = glGetUniformLocation(program_line[mode], "showMeshValue");
 				glUniform1f(loc, showMeshValue);
-				glLineWidth(2.f); 
+				glLineWidth(2.f);
 				glDrawArrays(GL_LINES, 0, 6 * models[modelIdx]->numtriangles);
-			glUseProgram(0);
+				glUseProgram(0);
+			}
+			glBindVertexArray(0);
 		}
-		glBindVertexArray(0);
-		
+
+		else if (mode == 1) { //explosion with scanline
+			glBindVertexArray(vaoHandle[modelIdx]);
+			glUseProgram(program[mode]);
+			float modelview[16];
+			float proj[16];
+			GLint loc;
+
+			// main texture
+			loc = glGetUniformLocation(program[mode], "tex");
+			glActiveTexture(GL_TEXTURE0 + 0); //GL_TEXTUREi = GL_TEXTURE0 + i
+			glBindTexture(GL_TEXTURE_2D, mainTextureID);
+			glUniform1i(loc, 0);
+
+			// model view matrix
+			glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
+			loc = glGetUniformLocation(program[mode], "modelview");	//get the location of uniform variable in shader
+			glUniformMatrix4fv(loc, 1, GL_FALSE, modelview);		//assign value to it 
+			// projection matrix
+			glGetFloatv(GL_PROJECTION_MATRIX, proj);
+			loc = glGetUniformLocation(program[mode], "proj");
+			glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
+			// all modes have basic phong shading
+			//phong shading needs position in local space
+			// normal matrix
+			glm::mat4 Nmatrix = glm::transpose(glm::inverse(glm::make_mat4(modelview)));
+			loc = glGetUniformLocation(program[mode], "Nmatrix");
+			glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(Nmatrix));
+
+			loc = glGetUniformLocation(program[mode], "Ka");
+			glUniform4fv(loc, 1, Ka);
+			loc = glGetUniformLocation(program[mode], "Kd");
+			glUniform4fv(loc, 1, Kd);
+			loc = glGetUniformLocation(program[mode], "lightnow");
+			glUniform3fv(loc, 1, glm::value_ptr(lightnow));
+			loc = glGetUniformLocation(program[mode], "Ks");
+			glUniform4fv(loc, 1, Ks);
+			loc = glGetUniformLocation(program[mode], "alpha");
+			glUniform1f(loc, shine);
+			if (mode == 1) {							// normal explode effect
+				if (expandValue > 0)
+					glDisable(GL_CULL_FACE);
+				loc = glGetUniformLocation(program[mode], "showMeshValue");
+				glUniform1f(loc, showMeshValue);
+				loc = glGetUniformLocation(program[mode], "scanlineValue");
+				glUniform1f(loc, scanlineValue);				
+				loc = glGetUniformLocation(program[mode], "min_y");
+				glUniform1f(loc, min_y[modelIdx]);
+				loc = glGetUniformLocation(program[mode], "max_y");
+				glUniform1f(loc, max_y[modelIdx]);
+				loc = glGetUniformLocation(program[mode], "fadeValue");
+				glUniform1f(loc, fadeValue);
+				loc = glGetUniformLocation(program[mode], "expandValue");
+				glUniform1f(loc, expandValue);
+				loc = glGetUniformLocation(program[mode], "showPercent");
+				glUniform1f(loc, showPercent[modelIdx]);
+				loc = glGetUniformLocation(program[mode], "meshEnlargeSize");
+				glUniform1f(loc, meshEnlargeSize[modelIdx]);
+				loc = glGetUniformLocation(program[mode], "seed");
+				glUniform1f(loc, randomSeed);
+			}
+
+			glDrawArrays(GL_TRIANGLES, 0, 3 * models[modelIdx]->numtriangles);
+			glUseProgram(0);
+
+			glEnable(GL_CULL_FACE);
+			glBindTexture(GL_TEXTURE_2D, NULL);
+
+			//draw mesh
+			if (showMeshValue > 0 && showMeshValue < 1) {
+				glBindVertexArray(vaoHandle_line[modelIdx]);
+				glUseProgram(program_line[mode]);
+				glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
+				glGetFloatv(GL_PROJECTION_MATRIX, proj);
+				loc = glGetUniformLocation(program_line[mode], "modelview"); //get the location of uniform variable in shader
+				glUniformMatrix4fv(loc, 1, GL_FALSE, modelview); //assign value to it 
+				loc = glGetUniformLocation(program_line[mode], "proj");
+				glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
+				loc = glGetUniformLocation(program_line[mode], "showMeshValue");
+				glUniform1f(loc, showMeshValue);
+				glLineWidth(2.f);
+				glDrawArrays(GL_LINES, 0, 6 * models[modelIdx]->numtriangles);
+				glUseProgram(0);
+			}
+			glBindVertexArray(0);
+		}
+
 	glPopMatrix();
 
 

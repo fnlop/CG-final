@@ -81,5 +81,7 @@
     <None Include="shaders\explode.vert">
       <Filter>shaders</Filter>
     </None>
+    <None Include="shaders\explode_scanline.frag" />
+    <None Include="shaders\explode_scanline.vert" />
   </ItemGroup>
 </Project>

@@ -143,6 +143,8 @@
     <None Include="shaders\dissolving.vert" />
     <None Include="shaders\explode.frag" />
     <None Include="shaders\explode.vert" />
+    <None Include="shaders\explode_scanline.frag" />
+    <None Include="shaders\explode_scanline.vert" />
     <None Include="shaders\mesh.frag" />
     <None Include="shaders\mesh.vert" />
     <None Include="shaders\phong.frag" />
