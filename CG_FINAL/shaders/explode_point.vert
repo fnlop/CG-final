@@ -12,9 +12,9 @@ uniform mat4 Nmatrix;
 uniform float showPercent;
 uniform float meshEnlargeSize;
 uniform float seed;
-uniform float scanlineValue;
-uniform float min_y;
-uniform float max_y;
+uniform vec3 mRaycastPoint;
+uniform float spreadValue;
+uniform float longestDis;
 
 out vec2 texturetofrag;
 out vec3 L;
@@ -36,10 +36,12 @@ mat4 rotationMatrix(vec3, float);
 
 void main() {
 	vec4 mdposition;
-	float normalize_y = (tPosition.y - max_y) / (min_y - max_y);
-	value = scanlineValue - normalize_y;
-
-	if (value <= 0) {								// not explode yet -> normal phong shading
+	if (spreadValue == 0)
+		value = -100;
+	else
+		value = spreadValue - distance(mRaycastPoint, tPosition) / longestDis;
+	
+	if (value < 0) {							// not explode yet -> normal phong shading
 		mdposition = modelview * vec4(Position, 1.0);
 		gl_Position = proj * modelview * vec4(Position, 1.0);
 	}
@@ -47,8 +49,7 @@ void main() {
 		// random rotation
 		vec3 rotatePosition = vec3(rotationMatrix(randVec3(tPosition), rand(tPosition) * 2 * PI * value) * vec4(Position - tPosition, 1.0)) + tPosition;
 		// push to outside and enlarge mesh with some random in scale
-		vec3 upVector = vec3(0, 1 * value * (max_y - min_y), 0); //the vector used to make point move upward
-		vec3 expandPosition = Position + upVector + (rotatePosition - tPosition) * meshEnlargeSize * (0.5 + rand(tPosition)) ;
+		vec3 expandPosition = tPosition * (1 + (expand - 1) * value) + (rotatePosition - tPosition) * meshEnlargeSize * (0.5 + rand(tPosition));
 		mdposition = modelview * vec4(expandPosition, 1.0);
 		gl_Position = proj * modelview * vec4(expandPosition, 1.0);
 	}

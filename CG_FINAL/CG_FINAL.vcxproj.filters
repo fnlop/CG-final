@@ -29,6 +29,7 @@
     <ClCompile Include="glm\glmimg_sim.c">
       <Filter>glm</Filter>
     </ClCompile>
+    <ClCompile Include="Model.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\shader_lib\shader.h" />
@@ -41,6 +42,7 @@
     <ClInclude Include="glm\glmint.h">
       <Filter>glm</Filter>
     </ClInclude>
+    <ClInclude Include="Model.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="glm">
@@ -83,5 +85,11 @@
     </None>
     <None Include="shaders\explode_scanline.frag" />
     <None Include="shaders\explode_scanline.vert" />
+    <None Include="shaders\explode_point.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\explode_point.vert">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

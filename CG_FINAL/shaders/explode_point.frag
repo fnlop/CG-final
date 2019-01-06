@@ -8,8 +8,8 @@ uniform sampler2D tex;
 uniform float showMeshValue;
 uniform float showPercent;
 uniform float seed;
-uniform float min_y;
-uniform float max_y;
+uniform float spreadValue;
+uniform vec3 mRaycastPoint;
 
 in vec2 texturetofrag;
 in vec3 L;
@@ -19,6 +19,7 @@ in float dist;
 in vec3 toeye;
 flat in vec3 center;
 flat in float value;
+
 out vec4 outColor;
 
 const vec4 La = vec4(0.2, 0.2, 0.2, 1.0);
@@ -31,21 +32,21 @@ const float totalFadePercent = 0.3;
 // fragment will change color from origin color to glow color when -changeColorPercent < value < 0
 const float changeColorPercent = 0.1;
 // fragment will have a little glow color when showing mesh line, with the max interpolation ratio = maxShowMeshColorPercent
-const float maxShowMeshColorPercent = 0.1;
+const float maxShowMeshColorPercent = 0.2;
 
 float rand(vec2);
 float rand(vec3);
 float rand(vec3, float);
 
 void main() {
-	if (value > 0) {											
+	if (value >= 0) {											
 		// discard partial fragment
 		float v = rand(center.zyx, seed);
 		if(v > showPercent){
 			discard;
 		}
 	}
-	if(value > totalFadePercent){
+	if (value >= totalFadePercent) {
 		discard;
 	}
 
