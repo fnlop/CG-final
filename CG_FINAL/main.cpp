@@ -19,7 +19,7 @@ extern "C"
 	#include "glm_helper.h"
 }
 
-#define PROGRAM_NUM (1)
+#define PROGRAM_NUM (3)
 #define OBJ_NUM (3)
 #define deltaTime (10)		// in ms (1e-3 second)
 
@@ -103,10 +103,13 @@ GLuint vbo_line_id[OBJ_NUM];
 GLuint vaoHandle[OBJ_NUM];
 GLuint vaoHandle_line[OBJ_NUM];
 int modelIdx = 0;
-GLuint program[PROGRAM_NUM + 2];
+GLuint program[PROGRAM_NUM];
+GLuint program_line[PROGRAM_NUM];
 int mode = 0;
-char *vertfile[PROGRAM_NUM + 2] = {"shaders/explode.vert", "shaders/mesh.vert"};
-char *fragfile[PROGRAM_NUM + 2] = {"shaders/explode.frag", "shaders/mesh.frag"};
+char *vertfile[PROGRAM_NUM] = {"shaders/explode.vert", "shaders/explode.vert" , "shaders/explode.vert" };
+char *fragfile[PROGRAM_NUM] = {"shaders/explode.frag", "shaders/explode.frag" , "shaders/explode.frag" };
+char *vertfile_line[PROGRAM_NUM] = { "shaders/mesh.vert", "shaders/mesh.vert", "shaders/mesh.vert" };
+char *fragfile_line[PROGRAM_NUM] = { "shaders/mesh.frag", "shaders/mesh.frag", "shaders/mesh.frag" };
 GLfloat Ka[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat Kd[4] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat Ks[4] = { 1.0, 1.0, 1.0, 1.0 };
@@ -352,11 +355,16 @@ void init(void)
 	
 	mainTextureID = loadTexture(main_tex_dir, 512, 256);
 
-	//you may need to do something here(create shaders/program(s) and create vbo(s)/vao from GLMmodel model)
-	for (int i = 0; i <= PROGRAM_NUM; i++) {
+	// create shader programs for exlpode effect and mesh line
+	for (int i = 0; i < PROGRAM_NUM; i++) {
 		GLuint vert = createShader(vertfile[i], "vertex");
 		GLuint frag = createShader(fragfile[i], "fragment");
 		program[i] = createProgram(vert, frag);
+	}
+	for (int i = 0; i < PROGRAM_NUM; i++) {
+		GLuint vert = createShader(vertfile_line[i], "vertex");
+		GLuint frag = createShader(fragfile_line[i], "fragment");
+		program_line[i] = createProgram(vert, frag);
 	}
 	// create vbos and vaos
 	glGenBuffers(OBJ_NUM, vbo_id);					// generate vbo buffers and assign their pointer to vboid
@@ -443,8 +451,9 @@ void display(void)
 			glUniform4fv(loc, 1, Ks);
 			loc = glGetUniformLocation(program[mode], "alpha");
 			glUniform1f(loc, shine);
-			if (mode == 0) {					//explode effect
-				glDisable(GL_CULL_FACE);
+			if (mode == 0) {							// normal explode effect
+				if (expandValue > 0)
+					glDisable(GL_CULL_FACE);
 				loc = glGetUniformLocation(program[mode], "showMeshValue");
 				glUniform1f(loc, showMeshValue);
 				loc = glGetUniformLocation(program[mode], "expandValue");
@@ -466,18 +475,16 @@ void display(void)
 		glBindTexture(GL_TEXTURE_2D, NULL);
 
 		//draw mesh
-
-
 		if (showMeshValue > 0 && showMeshValue < 1) {
 			glBindVertexArray(vaoHandle_line[modelIdx]);
-			glUseProgram(program[PROGRAM_NUM]);			
+			glUseProgram(program_line[mode]);			
 				glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
 				glGetFloatv(GL_PROJECTION_MATRIX, proj);
-				loc = glGetUniformLocation(program[PROGRAM_NUM], "modelview"); //get the location of uniform variable in shader
+				loc = glGetUniformLocation(program_line[mode], "modelview"); //get the location of uniform variable in shader
 				glUniformMatrix4fv(loc, 1, GL_FALSE, modelview); //assign value to it 
-				loc = glGetUniformLocation(program[PROGRAM_NUM], "proj");
+				loc = glGetUniformLocation(program_line[mode], "proj");
 				glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
-				loc = glGetUniformLocation(program[PROGRAM_NUM], "showMeshValue");
+				loc = glGetUniformLocation(program_line[mode], "showMeshValue");
 				glUniform1f(loc, showMeshValue);
 				glLineWidth(2.f); 
 				glDrawArrays(GL_LINES, 0, 6 * models[modelIdx]->numtriangles);
