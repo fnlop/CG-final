@@ -27,7 +27,7 @@ class ModelGroup
 		void loadModel(char *);
 		void constructVO(GLuint, GLuint);
 		void constructLineVO(GLuint, GLuint);
-		int getVertexNum(void);
+		int getTriangleNum(void);
 		GLMmodel* getGLMmodel(void);
 		float getBoundingRadius(void);
 		std::pair<float, float> getBoundingY();

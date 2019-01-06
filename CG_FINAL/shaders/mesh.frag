@@ -17,7 +17,7 @@ void main() {
 
 	float v = rand(PositionToFrag);
 	
-	if(rand(vec2(v,v)) > showPercentMesh){
+	if(v > showPercentMesh){
 		discard;
 	}
 	
