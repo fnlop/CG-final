@@ -113,42 +113,20 @@ void ModelGroup::loadModel(char * path) {
 		}
 		for (j = 0; j < 3; j++)
 			t[j] /= 3;
-
+		
 		int scale = 0;
-		index = model->triangles[i].vindices[0];
+		
 		for (j = 0; j < 3; j++) {
-			GLfloat tmp = t[j] - model->vertices[3 * index + j];
-			mesh[6 * i + 0].position[j] = model->vertices[3 * index + j] + scale * tmp;
-		}
-
-		index = model->triangles[i].vindices[1];
-		for (j = 0; j < 3; j++) {
-			GLfloat tmp = t[j] - model->vertices[3 * index + j];
-			mesh[6 * i + 1].position[j] = model->vertices[3 * index + j] + scale * tmp;
-		}
-
-		index = model->triangles[i].vindices[1];
-		for (j = 0; j < 3; j++) {
-			GLfloat tmp = t[j] - model->vertices[3 * index + j];
-			mesh[6 * i + 2].position[j] = model->vertices[3 * index + j] + scale * tmp;
-		}
-
-		index = model->triangles[i].vindices[2];
-		for (j = 0; j < 3; j++) {
-			GLfloat tmp = t[j] - model->vertices[3 * index + j];
-			mesh[6 * i + 3].position[j] = model->vertices[3 * index + j] + scale * tmp;
-		}
-
-		index = model->triangles[i].vindices[2];
-		for (j = 0; j < 3; j++) {
-			GLfloat tmp = t[j] - model->vertices[3 * index + j];
-			mesh[6 * i + 4].position[j] = model->vertices[3 * index + j] + scale * tmp;
-		}
-
-		index = model->triangles[i].vindices[0];
-		for (j = 0; j < 3; j++) {
-			GLfloat tmp = t[j] - model->vertices[3 * index + j];
-			mesh[6 * i + 5].position[j] = model->vertices[3 * index + j] + scale * tmp;
+			index = model->triangles[i].vindices[j];
+			for (int k = 0; k < 3; k++) {
+				GLfloat tmp = t[k] - model->vertices[3 * index + k];
+				mesh[6 * i + 2* j].position[k] = model->vertices[3 * index + k] + scale * tmp;
+			}
+			index = model->triangles[i].vindices[(j + 1) % 3];
+			for (int k = 0; k < 3; k++) {
+				GLfloat tmp = t[k] - model->vertices[3 * index + k];
+				mesh[6 * i + 2 * j + 1].position[k] = model->vertices[3 * index + k] + scale * tmp;
+			}
 		}
 	}
 }
