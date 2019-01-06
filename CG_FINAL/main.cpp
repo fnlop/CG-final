@@ -127,7 +127,7 @@ float showMeshValue = 0.0;
 float showPercent[OBJ_NUM] = { 0.01, 0.5, 0.1 };
 	// enlarge size of mesh after discarding, differ with different models and showPercent
 float meshEnlargeSize[OBJ_NUM] = { 10, 1, 3 };
-
+float showPercentMesh[OBJ_NUM] = { 0.15, 0.8, 0.8 };
 // for normal explode effect
 const float expandTime = 2.0;
 const float startFadePercent = 0.5;
@@ -374,9 +374,12 @@ void display(void)
 				glUniformMatrix4fv(loc, 1, GL_FALSE, modelview); //assign value to it 
 				loc = glGetUniformLocation(program_line[mode], "proj");
 				glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
+				loc = glGetUniformLocation(program_line[mode], "showPercentMesh");
+				glUniform1f(loc, showPercentMesh[modelIdx]);
 				loc = glGetUniformLocation(program_line[mode], "showMeshValue");
 				glUniform1f(loc, showMeshValue);
-				glLineWidth(2.f);
+
+				glLineWidth(1.f);
 				glDrawArrays(GL_LINES, 0, 6 * models[modelIdx].getVertexNum());
 			glUseProgram(0);
 		}

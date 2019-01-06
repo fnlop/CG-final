@@ -1,7 +1,7 @@
 #version 400
 
 uniform float showMeshValue;
-
+uniform float showPercentMesh;
 flat in vec3 PositionToFrag;
 
 out vec4 outColor;
@@ -16,10 +16,10 @@ const vec4 lineColor = vec4(0, 0, 0, 1);
 void main() {
 
 	float v = rand(PositionToFrag);
-	/*
-	if(rand(vec2(v,v)) > 0.01){
+	
+	if(rand(vec2(v,v)) > showPercentMesh){
 		discard;
-	}*/
+	}
 	
 	outColor = lineColor;
 	outColor.a = showMeshValue;

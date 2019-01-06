@@ -95,7 +95,7 @@ void ModelGroup::loadModel(char * path) {
 	// create mesh vertices
 	
 	mesh = new Point[6 * model->numtriangles];
-	for (unsigned int i = 0; i < model->numtriangles; i += 1) {
+	for (unsigned int i = 0; i < model->numtriangles; i += 2) {
 		index = model->triangles[i].vindices[0];
 		int j;
 
@@ -115,18 +115,18 @@ void ModelGroup::loadModel(char * path) {
 		for (j = 0; j < 3; j++)
 			t[j] /= 3;
 
-		int scale = 0;
+		int scale = 2;
 		
 		for (j = 0; j < 3; j++) {
 			index = model->triangles[i].vindices[j];
 			for (int k = 0; k < 3; k++) {
-				//GLfloat tmp = t[k] - model->vertices[3 * index + k];
-				mesh[6 * i + 2* j].position[k] = model->vertices[3 * index + k] ;
+				GLfloat tmp = model->vertices[3 * index + k] - t[k];
+				mesh[6 * i + 2* j].position[k] = model->vertices[3 * index + k] + scale *tmp;
 			}
 			index = model->triangles[i].vindices[(j + 1) % 3];
 			for (int k = 0; k < 3; k++) {
-				//GLfloat tmp = t[k] - model->vertices[3 * index + k];
-				mesh[6 * i + (2 * j) + 1].position[k] = model->vertices[3 * index + k] ;
+				GLfloat tmp = model->vertices[3 * index + k] -t[k];
+				mesh[6 * i + (2 * j) + 1].position[k] = model->vertices[3 * index + k] + scale * tmp;
 			}
 		}
 		

@@ -45,6 +45,7 @@ void main() {
 			discard;
 		}
 	}
+
 	if(value > totalFadePercent){
 		discard;
 	}
