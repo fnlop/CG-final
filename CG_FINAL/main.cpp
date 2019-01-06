@@ -415,6 +415,8 @@ void display(void)
 			glUniform1f(loc, shine);
 			if (mode == 0) {					//explode effect
 				glDisable(GL_CULL_FACE);
+				loc = glGetUniformLocation(program[mode], "showMeshValue");
+				glUniform1f(loc, showMeshValue);
 				loc = glGetUniformLocation(program[mode], "expandValue");
 				glUniform1f(loc, expandValue);
 				loc = glGetUniformLocation(program[mode], "showPercent");

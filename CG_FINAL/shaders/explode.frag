@@ -5,6 +5,7 @@ uniform vec4 Kd;
 uniform vec4 Ks;
 uniform float alpha;
 uniform sampler2D tex;
+uniform float showMeshValue;
 uniform float expandValue;
 uniform float showPercent;
 uniform float fadeValue;
@@ -30,23 +31,27 @@ float rand(vec3);
 float rand(vec3, float);
 
 void main() {
-	if (expandValue == 0) {							// not explode yet -> normal phong shading
-		vec4 ambient = Ka * La * texture2D(tex, texturetofrag);
-		vec4 diffuse = texture2D(tex, texturetofrag) * Kd * Ld * max(0, dot(-L,N)) / sqrt(dist);
-		vec4 specular = Ks * Ls * pow(max(0,dot(toeye,R)), alpha) / sqrt(dist);
-		outColor = 3 * ambient + diffuse + specular;
-	}
-	else {											// explode effect
+	if (expandValue != 0) {											
+		// discard partial fragment
 		float v = rand(center.zyx, seed);
 		if(v > showPercent){
 			discard;
 		}
-		if (fadeValue >= 1) {
-			discard;
-		}
-		outColor = glowColor;
-		outColor.a *= 1 - fadeValue;
 	}
+	if (fadeValue >= 1) {
+			discard;
+	}
+
+	// normal phong shading
+	vec4 ambient = Ka * La * texture2D(tex, texturetofrag);
+	vec4 diffuse = texture2D(tex, texturetofrag) * Kd * Ld * max(0, dot(-L,N)) / sqrt(dist);
+	vec4 specular = Ks * Ls * pow(max(0,dot(toeye,R)), alpha) / sqrt(dist);
+	vec4 phongColor = 3 * ambient + diffuse + specular;
+	// broken fragments color
+	vec4 fragColor = glowColor;
+	fragColor.a *= 1 - fadeValue;
+	// interpolation by showMeshValue
+	outColor = phongColor + showMeshValue * (fragColor - phongColor);
 }
 
 // magical random function

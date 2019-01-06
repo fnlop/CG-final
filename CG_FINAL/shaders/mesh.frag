@@ -11,6 +11,7 @@ float rand(vec3);
 float rand(vec3, float);
 
 const vec3 glowColor = vec3(120, 120, 255) / 255.0;
+const vec4 lineColor = vec4(0, 0, 0, 1);
 
 void main() {
 
@@ -20,12 +21,14 @@ void main() {
 		discard;
 	}
 	
-
+	outColor = lineColor;
+	outColor.a = showMeshValue;
+	/*
 	if(showMeshValue == 0)
 		outColor = vec4(0.0,0.0,0.0, 0.0);
 	else
 		outColor = vec4(glowColor,rand(vec2(v,v))/100 + showMeshValue);
-
+	*/
 }
 
 
