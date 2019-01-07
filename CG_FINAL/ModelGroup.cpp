@@ -122,11 +122,14 @@ void ModelGroup::loadModel(char * path) {
 			for (int k = 0; k < 3; k++) {
 				GLfloat tmp = model->vertices[3 * index + k] - t[k];
 				mesh[6 * i + 2* j].position[k] = model->vertices[3 * index + k] + scale *tmp;
+				mesh[6 * i + 2 * j].centerPosition[k] = mesh[6 * i + 2 * j].position[k] / 2;
 			}
 			index = model->triangles[i].vindices[(j + 1) % 3];
 			for (int k = 0; k < 3; k++) {
 				GLfloat tmp = model->vertices[3 * index + k] -t[k];
 				mesh[6 * i + (2 * j) + 1].position[k] = model->vertices[3 * index + k] + scale * tmp;
+				mesh[6 * i + 2 * j].centerPosition[k] += mesh[6 * i + 2 * j + 1].position[k] / 2;
+				mesh[6 * i + 2 * j + 1].centerPosition[k] = mesh[6 * i + 2 * j].centerPosition[k];
 			}
 		}
 		
@@ -172,8 +175,11 @@ void ModelGroup::constructLineVO(GLuint vboid, GLuint vaoid) {
 	// ---- generate VAO ----
 	glBindVertexArray(vaoid);
 	glEnableVertexAttribArray(0);
-	//position
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point), (void*)0);
+	glEnableVertexAttribArray(1);
+	// position
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point), (void*)(offsetof(Point, position)));
+	// center position
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Point), (void*)(offsetof(Point, centerPosition)));
 
 	// unbind
 	glBindVertexArray(0);

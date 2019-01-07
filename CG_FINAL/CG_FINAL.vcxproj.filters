@@ -51,45 +51,49 @@
     <Filter Include="shaders">
       <UniqueIdentifier>{ebee922d-7e89-4a11-bc93-b070a8d9b3f9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders\explode">
+      <UniqueIdentifier>{ec34248f-f365-4cbc-ba27-97c12542d354}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\mesh">
+      <UniqueIdentifier>{2e996087-8cee-4286-a9f3-be1f9626c0e3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\dissolving.frag">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="shaders\dissolving.vert">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="shaders\mesh.frag">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="shaders\mesh.vert">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="shaders\phong.frag">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="shaders\phong.vert">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="shaders\ramp.frag">
-      <Filter>shaders</Filter>
-    </None>
-    <None Include="shaders\ramp.vert">
-      <Filter>shaders</Filter>
-    </None>
     <None Include="shaders\explode.frag">
-      <Filter>shaders</Filter>
+      <Filter>shaders\explode</Filter>
     </None>
     <None Include="shaders\explode.vert">
-      <Filter>shaders</Filter>
+      <Filter>shaders\explode</Filter>
     </None>
-    <None Include="shaders\explode_scanline.frag" />
-    <None Include="shaders\explode_scanline.vert" />
     <None Include="shaders\explode_point.frag">
-      <Filter>shaders</Filter>
+      <Filter>shaders\explode</Filter>
     </None>
     <None Include="shaders\explode_point.vert">
-      <Filter>shaders</Filter>
+      <Filter>shaders\explode</Filter>
+    </None>
+    <None Include="shaders\explode_scanline.frag">
+      <Filter>shaders\explode</Filter>
+    </None>
+    <None Include="shaders\explode_scanline.vert">
+      <Filter>shaders\explode</Filter>
+    </None>
+    <None Include="shaders\mesh.frag">
+      <Filter>shaders\mesh</Filter>
+    </None>
+    <None Include="shaders\mesh.vert">
+      <Filter>shaders\mesh</Filter>
+    </None>
+    <None Include="shaders\mesh_scanline.frag">
+      <Filter>shaders\mesh</Filter>
+    </None>
+    <None Include="shaders\mesh_scanline.vert">
+      <Filter>shaders\mesh</Filter>
+    </None>
+    <None Include="shaders\mesh_point.frag">
+      <Filter>shaders\mesh</Filter>
+    </None>
+    <None Include="shaders\mesh_point.vert">
+      <Filter>shaders\mesh</Filter>
     </None>
   </ItemGroup>
 </Project>

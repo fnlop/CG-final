@@ -100,8 +100,8 @@ GLuint program[PROGRAM_NUM];
 GLuint program_line[PROGRAM_NUM];
 char *vertfile[PROGRAM_NUM] = {"shaders/explode.vert", "shaders/explode_scanline.vert" , "shaders/explode_point.vert" };
 char *fragfile[PROGRAM_NUM] = {"shaders/explode.frag", "shaders/explode_scanline.frag" , "shaders/explode_point.frag" };
-char *vertfile_line[PROGRAM_NUM] = { "shaders/mesh.vert", "shaders/mesh.vert", "shaders/mesh.vert" };
-char *fragfile_line[PROGRAM_NUM] = { "shaders/mesh.frag", "shaders/mesh.frag", "shaders/mesh.frag" };
+char *vertfile_line[PROGRAM_NUM] = { "shaders/mesh.vert", "shaders/mesh_scanline.vert", "shaders/mesh_point.vert" };
+char *fragfile_line[PROGRAM_NUM] = { "shaders/mesh.frag", "shaders/mesh_scanline.frag", "shaders/mesh_point.frag" };
 
 // some basic parameters
 glm::vec2 windowSize(512.0, 512.0);
@@ -365,23 +365,39 @@ void display(void)
 		glBindTexture(GL_TEXTURE_2D, NULL);
 
 		//draw mesh
-		if (showMeshValue > 0 && showMeshValue < 1) {
-			glBindVertexArray(vaoHandle_line[modelIdx]);
-			glUseProgram(program_line[mode]);
-				glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
-				glGetFloatv(GL_PROJECTION_MATRIX, proj);
-				loc = glGetUniformLocation(program_line[mode], "modelview"); //get the location of uniform variable in shader
-				glUniformMatrix4fv(loc, 1, GL_FALSE, modelview); //assign value to it 
-				loc = glGetUniformLocation(program_line[mode], "proj");
-				glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
-				loc = glGetUniformLocation(program_line[mode], "showPercentMesh");
-				glUniform1f(loc, showPercentMesh[modelIdx]);
-				loc = glGetUniformLocation(program_line[mode], "showMeshValue");
-				glUniform1f(loc, showMeshValue);
-				glLineWidth(1.f);
-				glDrawArrays(GL_LINES, 0, 6 * models[modelIdx].getTriangleNum());
-			glUseProgram(0);
-		}
+		glBindVertexArray(vaoHandle_line[modelIdx]);
+		glUseProgram(program_line[mode]);
+			loc = glGetUniformLocation(program_line[mode], "modelview"); //get the location of uniform variable in shader
+			glUniformMatrix4fv(loc, 1, GL_FALSE, modelview); //assign value to it 
+			loc = glGetUniformLocation(program_line[mode], "proj");
+			glUniformMatrix4fv(loc, 1, GL_FALSE, proj);
+			loc = glGetUniformLocation(program_line[mode], "showPercentMesh");
+			glUniform1f(loc, showPercentMesh[modelIdx]);
+			loc = glGetUniformLocation(program_line[mode], "showMeshValue");
+			glUniform1f(loc, showMeshValue);
+			loc = glGetUniformLocation(program_line[mode], "seed");
+			glUniform1f(loc, randomSeed);
+			glLineWidth(1.f);
+			if (mode == 0) {
+			}
+			else if (mode == 1) {
+				loc = glGetUniformLocation(program_line[mode], "scanlineValue");
+				glUniform1f(loc, scanlineValue);
+				loc = glGetUniformLocation(program_line[mode], "min_y");
+				glUniform1f(loc, models[modelIdx].getBoundingY().first);
+				loc = glGetUniformLocation(program_line[mode], "max_y");
+				glUniform1f(loc, models[modelIdx].getBoundingY().second);
+			}
+			else if (mode == 2) {
+				loc = glGetUniformLocation(program_line[mode], "mRaycastPoint");
+				glUniform3fv(loc, 1, glm::value_ptr(raycastPoint));
+				loc = glGetUniformLocation(program_line[mode], "spreadValue");
+				glUniform1f(loc, spreadValue);
+				loc = glGetUniformLocation(program_line[mode], "longestDis");
+				glUniform1f(loc, models[modelIdx].getBoundingRadius() + glm::length(raycastPoint));
+			}
+			glDrawArrays(GL_LINES, 0, 6 * models[modelIdx].getTriangleNum());
+		glUseProgram(0);
 		glBindVertexArray(0);
 
 	glPopMatrix();

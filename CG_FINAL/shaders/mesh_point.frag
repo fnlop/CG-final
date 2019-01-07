@@ -5,6 +5,7 @@ uniform float showPercentMesh;
 uniform float seed;
 
 flat in vec3 center;
+flat in float value;
 out vec4 outColor;
 
 float rand(vec2);
@@ -13,9 +14,12 @@ float rand(vec3, float);
 
 const vec3 glowColor = vec3(120, 120, 255) / 255.0;
 const vec4 lineColor = vec4(0, 0, 0, 1);
+// fragment will fading out when startFadePercent < value < totalFadePercent
+const float startFadePercent = -0.1;
+const float totalFadePercent = 0;
 
 void main() {
-	if (showMeshValue == 1) {
+	if (value > totalFadePercent) {
 		discard;
 	}
 
@@ -25,7 +29,7 @@ void main() {
 	}
 	
 	outColor = lineColor;
-	outColor.a = showMeshValue;
+	outColor.a *= min( showMeshValue, 1 - (clamp(value, startFadePercent, 1) - startFadePercent) / (totalFadePercent - startFadePercent));
 }
 
 

@@ -141,8 +141,6 @@
     <ClInclude Include="ModelGroup.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\dissolving.frag" />
-    <None Include="shaders\dissolving.vert" />
     <None Include="shaders\explode.frag" />
     <None Include="shaders\explode.vert" />
     <None Include="shaders\explode_scanline.frag" />
@@ -151,10 +149,10 @@
     <None Include="shaders\explode_point.vert" />
     <None Include="shaders\mesh.frag" />
     <None Include="shaders\mesh.vert" />
-    <None Include="shaders\phong.frag" />
-    <None Include="shaders\phong.vert" />
-    <None Include="shaders\ramp.frag" />
-    <None Include="shaders\ramp.vert" />
+    <None Include="shaders\mesh_point.frag" />
+    <None Include="shaders\mesh_point.vert" />
+    <None Include="shaders\mesh_scanline.frag" />
+    <None Include="shaders\mesh_scanline.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
