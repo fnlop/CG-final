@@ -115,7 +115,7 @@ void ModelGroup::loadModel(char * path) {
 		for (j = 0; j < 3; j++)
 			t[j] /= 3;
 
-		int scale = 2;
+		int scale = 1;
 		
 		for (j = 0; j < 3; j++) {
 			index = model->triangles[i].vindices[j];
