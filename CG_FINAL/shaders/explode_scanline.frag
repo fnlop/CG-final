@@ -10,6 +10,7 @@ uniform float showPercent;
 uniform float seed;
 uniform float min_y;
 uniform float max_y;
+uniform float fadeValue;
 
 in vec2 texturetofrag;
 in vec3 L;
@@ -27,11 +28,13 @@ const vec4 Ls = vec4(0.5, 0.5, 0.5, 1.0);
 const vec4 glowColor = vec4(120, 120, 255, 125) / 255.0;
 // fragment will fading out when startFadePercent < value < totalFadePercent
 const float startFadePercent = 0.1;
-const float totalFadePercent = 0.3;
+const float totalFadePercent = 1.0;
 // fragment will change color from origin color to glow color when -changeColorPercent < value < 0
 const float changeColorPercent = 0.1;
 // fragment will have a little glow color when showing mesh line, with the max interpolation ratio = maxShowMeshColorPercent
 const float maxShowMeshColorPercent = 0.1;
+const float flickerSpeed = 30;
+const float minAlpha = 0.5;	
 
 float rand(vec2);
 float rand(vec3);
@@ -59,7 +62,9 @@ void main() {
 	vec4 fragColor = glowColor;
 	fragColor.a *= 1 - (clamp(value, startFadePercent, 1) - startFadePercent) / (totalFadePercent - startFadePercent);
 	// interpolation by showMeshValue and value
-	outColor = phongColor + clamp((value + changeColorPercent) / changeColorPercent, showMeshValue * maxShowMeshColorPercent, 1) * (fragColor - phongColor);
+	outColor = phongColor + min( max(value, 0) / changeColorPercent + showMeshValue * maxShowMeshColorPercent, 1) * (fragColor - phongColor);
+	outColor = outColor * ((cos(max(value, 0) * flickerSpeed * rand(center, seed)) + 1) / 2 * (1 - minAlpha) + minAlpha);
+
 }
 
 // magical random function

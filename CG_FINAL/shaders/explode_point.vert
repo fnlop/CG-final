@@ -27,6 +27,7 @@ flat out float value;
 
 #define PI (3.14159)
 const float expand = 2;
+const float maxspreadValue = 2;
 
 float rand(vec2);
 float rand(vec3);
@@ -49,7 +50,7 @@ void main() {
 		// random rotation
 		vec3 rotatePosition = vec3(rotationMatrix(randVec3(tPosition), rand(tPosition) * 2 * PI * value) * vec4(Position - tPosition, 1.0)) + tPosition;
 		// push to outside and enlarge mesh with some random in scale
-		vec3 expandPosition = tPosition * (1 + (expand - 1) * value) + (rotatePosition - tPosition) * meshEnlargeSize * (0.5 + rand(tPosition));
+		vec3 expandPosition = tPosition * (1 + (expand - 1) * value) + (rotatePosition - tPosition) * meshEnlargeSize * (0.5 + rand(tPosition)) * ((maxspreadValue - spreadValue)/ maxspreadValue);
 		mdposition = modelview * vec4(expandPosition, 1.0);
 		gl_Position = proj * modelview * vec4(expandPosition, 1.0);
 	}

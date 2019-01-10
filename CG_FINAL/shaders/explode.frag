@@ -8,8 +8,8 @@ uniform sampler2D tex;
 uniform float showMeshValue;
 uniform float expandValue;
 uniform float showPercent;
-uniform float fadeValue;
 uniform float seed;
+uniform float fadeValue;
 
 in vec2 texturetofrag;
 in vec3 L;
@@ -25,6 +25,12 @@ const vec4 La = vec4(0.2, 0.2, 0.2, 1.0);
 const vec4 Ld = vec4(0.8, 0.8, 0.8, 1.0);
 const vec4 Ls = vec4(0.5, 0.5, 0.5, 1.0);
 const vec4 glowColor = vec4(120, 120, 255, 125) / 255.0;
+// fragment will have a little glow color when showing mesh line, with the max interpolation ratio = maxShowMeshColorPercent
+const float showMeshWeight = 0.2;
+const float expandWeight = 0.8;
+// for flicker
+const float flickerSpeed = 30;
+const float minAlpha = 0.5;	
 
 float rand(vec2);
 float rand(vec3);
@@ -50,8 +56,14 @@ void main() {
 	// broken fragments color
 	vec4 fragColor = glowColor;
 	fragColor.a *= 1 - fadeValue;
+	//fragColor.rgb = min(fragColor.rgb + fadeValue , 1);
 	// interpolation by showMeshValue
-	outColor = phongColor + showMeshValue * (fragColor - phongColor);
+	//outColor = fragColor + showMeshValue * (phongColor - fragColor) * rand(texturetofrag);
+	outColor = (phongColor + min(showMeshWeight * showMeshValue + expandWeight * expandValue, 1) * (fragColor - phongColor));
+	outColor = outColor * ((cos(fadeValue * flickerSpeed * rand(center, seed)) + 1) / 2 * (1 - minAlpha) + minAlpha);
+	//outColor.a = 1 - fadeValue;
+
+
 }
 
 // magical random function

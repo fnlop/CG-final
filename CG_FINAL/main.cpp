@@ -126,12 +126,12 @@ float showMeshValue = 0.0;
 	// discard some traingles of OBJ with complicate mesh for better visual effect, differ with different models
 float showPercent[OBJ_NUM] = { 0.01, 0.5, 0.1 };
 	// enlarge size of mesh after discarding, differ with different models and showPercent
-float meshEnlargeSize[OBJ_NUM] = { 10, 1, 3 };
+float meshEnlargeSize[OBJ_NUM] = { 8, 1, 3 };
 float showPercentMesh[OBJ_NUM] = { 0.15, 0.8, 0.8 };
 // for normal explode effect
 const float expandTime = 2.0;
 const float startFadePercent = 0.5;
-const float fadeTime = 2.0;
+const float fadeTime = 1.0;
 float expandValue = 0.0;
 float fadeValue = 0.0;
 
@@ -165,8 +165,8 @@ void Tick(int id) {
 				}
 			}
 			else if (mode == 1) {
-				if (scanlineValue < 1.5) {
-					scanlineValue = std::fmin(scanlineValue + d / scanTime, 1.5);
+				if (scanlineValue < 2) {
+					scanlineValue = std::fmin(scanlineValue + d / scanTime, 2);
 				}
 			}
 			else if (mode == 2) {
@@ -348,7 +348,9 @@ void display(void)
 				loc = glGetUniformLocation(program[mode], "min_y");
 				glUniform1f(loc, models[modelIdx].getBoundingY().first);
 				loc = glGetUniformLocation(program[mode], "max_y");
-				glUniform1f(loc, models[modelIdx].getBoundingY().second);
+				glUniform1f(loc, models[modelIdx].getBoundingY().second);				
+				loc = glGetUniformLocation(program[mode], "fadeValue");
+				glUniform1f(loc, fadeValue);
 			}
 			else if (mode == 2) {						// explode from point
 				loc = glGetUniformLocation(program[mode], "mRaycastPoint");

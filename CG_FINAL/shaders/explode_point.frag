@@ -33,6 +33,8 @@ const float totalFadePercent = 0.3;
 const float changeColorPercent = 0.1;
 // fragment will have a little glow color when showing mesh line, with the max interpolation ratio = maxShowMeshColorPercent
 const float maxShowMeshColorPercent = 0.2;
+const float flickerSpeed = 30;
+const float minAlpha = 0.5;	
 
 float rand(vec2);
 float rand(vec3);
@@ -60,11 +62,15 @@ void main() {
 	fragColor.a *= 1 - (clamp(value, startFadePercent, 1) - startFadePercent) / (totalFadePercent - startFadePercent);
 	if (gl_FrontFacing) {
 		// interpolation by showMeshValue and value
-		outColor = phongColor + clamp((value + changeColorPercent) / changeColorPercent, showMeshValue * maxShowMeshColorPercent, 1) * (fragColor - phongColor);
+		//outColor = phongColor + clamp((value + changeColorPercent) / changeColorPercent, showMeshValue * maxShowMeshColorPercent, 1) * (fragColor - phongColor);
+		outColor = phongColor + min( max(value, 0) / changeColorPercent + showMeshValue * maxShowMeshColorPercent, 1) * (fragColor - phongColor);
+		outColor = outColor * ((cos(max(value, 0) * flickerSpeed * rand(center, seed)) + 1) / 2 * (1 - minAlpha) + minAlpha);
+
 	}
 	else {
 		// directy use fragColor
 		outColor = fragColor;
+		outColor.rgb *= 0.5 ;
 	}
 }
 

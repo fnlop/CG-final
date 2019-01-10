@@ -13,6 +13,7 @@ uniform float expandValue;
 uniform float showPercent;
 uniform float meshEnlargeSize;
 uniform float seed;
+uniform float fadeValue;
 
 out vec2 texturetofrag;
 out vec3 L;
@@ -41,7 +42,7 @@ void main() {
 		// random rotation
 		vec3 rotatePosition = vec3(rotationMatrix(randVec3(tPosition), rand(tPosition) * 2 * PI * expandValue) * vec4(Position - tPosition, 1.0)) + tPosition;
 		// push to outside and enlarge mesh with some random in scale
-		vec3 expandPosition = (tPosition * (1 + (expand - 1) * expandValue) + (rotatePosition - tPosition) * meshEnlargeSize * (0.5 + rand(tPosition)));
+		vec3 expandPosition = (tPosition * (1 + (expand - 1) * expandValue) + (rotatePosition - tPosition) * meshEnlargeSize  * (0.5 + rand(tPosition)) * (1-fadeValue) )  ;
 		mdposition = modelview * vec4(expandPosition, 1.0);
 		gl_Position = proj * modelview * vec4(expandPosition, 1.0);
 	}
